@@ -2,12 +2,15 @@ package com.example.tournament.domain.entity;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 @Entity
@@ -35,6 +38,9 @@ public class Tournament {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    @OneToMany(mappedBy = "tournament")
+    private List<TournamentTeam> tournamentTeams = new ArrayList<>();
 
     public Tournament() {
     }
@@ -93,5 +99,13 @@ public class Tournament {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public List<TournamentTeam> getTournamentTeams() {
+        return tournamentTeams;
+    }
+
+    public void setTournamentTeams(List<TournamentTeam> tournamentTeams) {
+        this.tournamentTeams = tournamentTeams;
     }
 }

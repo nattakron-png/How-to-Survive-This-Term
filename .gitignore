@@ -1,4 +1,7 @@
-/GIT-GUIDE.md
+.env
+.env.*
+!.env.example
+.DS_Store
 HELP.md
 target/
 .mvn/wrapper/maven-wrapper.jar

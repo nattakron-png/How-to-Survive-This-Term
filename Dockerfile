@@ -1,9 +1,21 @@
-FROM mcr.microsoft.com/openjdk/jdk:21-ubuntu
-VOLUME /tmp
-ARG JAVA_OPTS
-ENV JAVA_OPTS=$JAVA_OPTS
-COPY target/tournament-0.0.1-SNAPSHOT.jar softwaredesignproject.jar
+FROM maven:3.9-eclipse-temurin-21 AS development
+WORKDIR /workspace
+COPY pom.xml .
+RUN mvn -B dependency:go-offline
+COPY src ./src
+CMD ["mvn", "-B", "spring-boot:run"]
+
+FROM development AS build
+RUN mvn -B -DskipTests package
+
+FROM eclipse-temurin:21-jre-jammy AS runtime
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system app \
+    && useradd --system --gid app app
+WORKDIR /app
+COPY --from=build /workspace/target/tournament-0.0.1-SNAPSHOT.jar app.jar
+USER app
 EXPOSE 8080
-ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar softwaredesignproject.jar"]
-# For Spring-Boot project, use the entrypoint below to reduce Tomcat startup time.
-#ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -Djava.security.egd=file:/dev/./urandom -jar softwaredesignproject.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]

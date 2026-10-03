@@ -10,6 +10,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 @Entity
@@ -41,6 +42,9 @@ public class Match {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "next_match_id")
     private Match nextMatch;
+
+    @OneToOne(mappedBy = "match")
+    private MatchResult result;
 
     @Column(name = "scheduled_at")
     private LocalDateTime scheduledAt;
@@ -108,6 +112,14 @@ public class Match {
 
     public void setNextMatch(Match nextMatch) {
         this.nextMatch = nextMatch;
+    }
+
+    public MatchResult getResult() {
+        return result;
+    }
+
+    public void setResult(MatchResult result) {
+        this.result = result;
     }
 
     public LocalDateTime getScheduledAt() {

@@ -9,5 +9,19 @@
 | 4 | นายณัฐกร รุ่งฟ้า | 673380512-7 | 2 | nattakron.r@kkumail.com |   |
 | 5 | นายวัชรพล ดวงกองเงิน | 673380290-9 | 2 | Vacharapoln.d@kkumail.com |   |
 
-# คู่มือ
-https://www.youtube.com/watch?v=x2btfv_IyUE&list=RDx2btfv_IyUE&start_radio=1
+## เริ่มพัฒนา
+
+เปิด Docker Desktop โดยใช้ Linux containers จากนั้นรันในโฟลเดอร์ repo:
+
+```powershell
+Copy-Item .env.example .env
+docker compose up -d --build --wait
+```
+
+คัดลอก `.env` เฉพาะครั้งแรก ถ้ามีไฟล์อยู่แล้วให้ใช้ไฟล์เดิม Docker build ด้วย Java 21 ให้ ไม่ต้องติดตั้ง Java หรือ Maven ในเครื่องสำหรับวิธีนี้
+
+ตรวจแอปที่ <http://localhost:8080/actuator/health> ควรได้ `{"status":"UP"}` ตอนนี้ยังไม่มีหน้าหลักหรือ business API จึงอาจได้ 404 เมื่อเปิด `/`
+
+อ่านวิธีรันจาก IDE ทดสอบ และแก้ปัญหาได้ที่ [คู่มือ setup](doc/setup.md)
+
+API ที่พัฒนาแล้ว: [Team API](doc/team-api.md) สำหรับจัดการทีมและผู้เล่นในทีมตาม schema ปัจจุบัน

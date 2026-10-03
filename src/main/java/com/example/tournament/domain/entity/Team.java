@@ -32,6 +32,9 @@ public class Team {
     @OneToMany(mappedBy = "team")
     private List<Player> players = new ArrayList<>();
 
+    @OneToMany(mappedBy = "team")
+    private List<TournamentTeam> tournamentTeams = new ArrayList<>();
+
     public Team() {
     }
 
@@ -73,5 +76,13 @@ public class Team {
 
     public void setPlayers(List<Player> players) {
         this.players = players;
+    }
+
+    public List<TournamentTeam> getTournamentTeams() {
+    return tournamentTeams;
+}
+
+    public void setTournamentTeams(List<TournamentTeam> tournamentTeams) {
+    this.tournamentTeams = tournamentTeams;
     }
 }

@@ -1,0 +1,10 @@
+.git
+.idea
+.vscode
+.DS_Store
+target
+.env
+.env.*
+!.env.example
+GIT-GUIDE.md
+*.pdf

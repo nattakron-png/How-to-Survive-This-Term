@@ -1,0 +1,75 @@
+name: tournament
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ${DB_NAME:-tournament}
+      POSTGRES_USER: ${DB_USERNAME:-tournament}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-tournament_local}
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  app:
+    build:
+      context: .
+      target: runtime
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:8080"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-tournament}
+      DB_USERNAME: ${DB_USERNAME:-tournament}
+      DB_PASSWORD: ${DB_PASSWORD:-tournament_local}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  test-db:
+    image: postgres:17
+    profiles: ["test"]
+    environment:
+      POSTGRES_DB: tournament_test
+      POSTGRES_USER: tournament_test
+      POSTGRES_PASSWORD: test_local
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tournament_test -d tournament_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  tests:
+    profiles: ["test"]
+    build:
+      context: .
+      target: development
+    command: ["mvn", "-B", "test"]
+    environment:
+      DB_HOST: test-db
+      DB_PORT: 5432
+      DB_NAME: tournament_test
+      DB_USERNAME: tournament_test
+      DB_PASSWORD: test_local
+    depends_on:
+      test-db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

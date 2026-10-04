@@ -6,9 +6,12 @@ import java.util.List;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
@@ -25,6 +28,13 @@ public class Team {
 
     @Column(columnDefinition = "TEXT")
     private String description;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "game_id")
+    private Game game;
+
+    @Column(name = "logo_url", length = 500)
+    private String logoUrl;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -62,6 +72,22 @@ public class Team {
         this.description = description;
     }
 
+    public Game getGame() {
+        return game;
+    }
+
+    public void setGame(Game game) {
+        this.game = game;
+    }
+
+    public String getLogoUrl() {
+        return logoUrl;
+    }
+
+    public void setLogoUrl(String logoUrl) {
+        this.logoUrl = logoUrl;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -79,10 +105,10 @@ public class Team {
     }
 
     public List<TournamentTeam> getTournamentTeams() {
-    return tournamentTeams;
-}
+        return tournamentTeams;
+    }
 
     public void setTournamentTeams(List<TournamentTeam> tournamentTeams) {
-    this.tournamentTeams = tournamentTeams;
+        this.tournamentTeams = tournamentTeams;
     }
 }

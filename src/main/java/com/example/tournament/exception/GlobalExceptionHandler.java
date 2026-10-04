@@ -26,6 +26,11 @@ public class GlobalExceptionHandler {
                 .body(ApiError.of("This change conflicts with existing data"));
     }
 
+    @ExceptionHandler(ValidationException.class)
+    public ResponseEntity<ApiError> badRequest(ValidationException exception) {
+        return ResponseEntity.badRequest().body(ApiError.of(exception.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> validation(MethodArgumentNotValidException exception) {
         String message = exception.getBindingResult().getFieldErrors().stream()

@@ -54,6 +54,12 @@ public class Tournament {
     @Column(name = "logo_url", length = 500)
     private String logoUrl;
 
+    @Column(name = "total_games")
+    private Short totalGames;
+
+    @Column(name = "points_per_kill", nullable = false)
+    private Short pointsPerKill = 1;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -149,5 +155,21 @@ public class Tournament {
 
     public void setTournamentTeams(List<TournamentTeam> tournamentTeams) {
         this.tournamentTeams = tournamentTeams;
+    }
+
+        public Short getTotalGames() {
+        return totalGames;
+    }
+
+    public void setTotalGames(Short totalGames) {
+        this.totalGames = totalGames;
+    }
+
+    public Short getPointsPerKill() {
+        return pointsPerKill;
+    }
+
+    public void setPointsPerKill(Short pointsPerKill) {
+        this.pointsPerKill = pointsPerKill;
     }
 }

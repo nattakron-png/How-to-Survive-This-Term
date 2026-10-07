@@ -20,7 +20,9 @@ docker compose up -d --build --wait
 
 คัดลอก `.env` เฉพาะครั้งแรก ถ้ามีไฟล์อยู่แล้วให้ใช้ไฟล์เดิม Docker build ด้วย Java 21 ให้ ไม่ต้องติดตั้ง Java หรือ Maven ในเครื่องสำหรับวิธีนี้
 
-ตรวจแอปที่ <http://localhost:8080/actuator/health> ควรได้ `{"status":"UP"}` ตอนนี้ยังไม่มีหน้าหลักหรือ business API จึงอาจได้ 404 เมื่อเปิด `/`
+ตรวจแอปที่ <http://localhost:8080/actuator/health> ควรได้ `{"status":"UP"}` หน้า `/` ยังไม่มีหน้าเว็บหลัก จึงอาจได้ 404
+
+เปิด <http://localhost:8080/swagger-ui.html> เพื่อดูและทดลอง API ที่มีอยู่ หรือดู OpenAPI JSON ที่ <http://localhost:8080/v3/api-docs> หลังแก้โค้ดให้ rebuild แอปด้วย `docker compose up -d --build --wait app`
 
 อ่านวิธีรันจาก IDE ทดสอบ และแก้ปัญหาได้ที่ [คู่มือ setup](doc/setup.md)
 

@@ -14,6 +14,9 @@ public class TournamentRequest {
     private LocalDate startDate;
     private LocalDate endDate;
 
+    private String name;
+    private String description;
+
     public Long getGameId() {
         return gameId;
     }
@@ -69,4 +72,21 @@ public class TournamentRequest {
     public void setEndDate(LocalDate endDate) {
         this.endDate = endDate;
     }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
 }

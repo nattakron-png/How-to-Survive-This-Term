@@ -2,7 +2,9 @@ package com.example.tournament.service.format;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.stereotype.Component;
 
@@ -64,12 +66,61 @@ public class SingleEliminationStrategy implements FormatStrategy {
             byRound.add(round);
         }
 
-        // 2. เรียงจากนัดชิงลงมา เพื่อให้ save แมตช์ปลายทางก่อน
+        // 2. ผูก next_match: รอบ r แมตช์ k → รอบ r+1 แมตช์ ceil(k/2) (นัดชิงเป็น null)
+        for (int r = 0; r < rounds - 1; r++) {
+            List<Match> current = byRound.get(r);
+            List<Match> next = byRound.get(r + 1);
+            for (int k = 0; k < current.size(); k++) {
+                current.get(k).setNextMatch(next.get(k / 2));
+            }
+        }
+
+        // 3. ใส่ทีมรอบแรกตามลำดับ seed มาตรฐาน และจัดการบาย
+        int[] order = seedOrder(size);
+        Set<Match> byes = new HashSet<>();
+        List<Match> firstRound = byRound.get(0);
+        for (int k = 0; k < firstRound.size(); k++) {
+            Match match = firstRound.get(k);
+            Team teamA = teamAtSeed(teams, order[2 * k]);
+            Team teamB = teamAtSeed(teams, order[2 * k + 1]);
+            if (teamA != null && teamB != null) {
+                match.setTeamA(teamA);
+                match.setTeamB(teamB);
+                match.setStatus(MatchStatus.SCHEDULED.name());
+            } else {
+                // บาย: ส่งทีมที่มีไปรอบถัดไปทันที และไม่บันทึกแมตช์นี้
+                placeInNextMatch(match, teamA != null ? teamA : teamB);
+                byes.add(match);
+            }
+        }
+
+        // 4. เรียงจากนัดชิงลงมา เพื่อให้ save แมตช์ปลายทางก่อน
         List<Match> result = new ArrayList<>();
         for (int r = rounds - 1; r >= 0; r--) {
-            result.addAll(byRound.get(r));
+            for (Match match : byRound.get(r)) {
+                if (!byes.contains(match)) {
+                    result.add(match);
+                }
+            }
         }
         return result;
+    }
+
+    /** เลขคี่ไปช่อง A เลขคู่ไปช่อง B ตรงกับ BracketProgressionListener */
+    private static void placeInNextMatch(Match from, Team team) {
+        Match next = from.getNextMatch();
+        if (from.getMatchNumber() % 2 == 1) {
+            next.setTeamA(team);
+        } else {
+            next.setTeamB(team);
+        }
+        if (next.getTeamA() != null && next.getTeamB() != null) {
+            next.setStatus(MatchStatus.SCHEDULED.name());
+        }
+    }
+
+    private static Team teamAtSeed(List<Team> teams, int seed) {
+        return seed <= teams.size() ? teams.get(seed - 1) : null;
     }
 
     /** ลำดับ seed ในสาย เช่น 8 ทีม → 1, 8, 4, 5, 2, 7, 3, 6 */

@@ -114,34 +114,34 @@ class TeamApiTests {
         }
 
         @Test
-        void searchesPlayersByNameWithinTeam() throws Exception {
+        void searchesPlayersByRoleWithinTeam() throws Exception {
 
                 // สร้าง Team สำหรับทดสอบ
                 Long teamId = createTeam(uniqueName());
 
                 // สร้าง Player คนที่ 1
-                // ชื่อมีคำว่า "Alpha"
-                Player firstPlayer = new Player();
-                firstPlayer.setName("Alpha Player");
-                firstPlayer.setRole("Player");
-                firstPlayer.setCreatedAt(LocalDateTime.now());
-                firstPlayer.setTeam(teams.findById(teamId).orElseThrow());
-                players.saveAndFlush(firstPlayer);
+                // Role เป็น Captain
+                Player captain = new Player();
+                captain.setName("Alpha Player");
+                captain.setRole("Captain");
+                captain.setCreatedAt(LocalDateTime.now());
+                captain.setTeam(teams.findById(teamId).orElseThrow());
+                players.saveAndFlush(captain);
 
                 // สร้าง Player คนที่ 2
-                // ชื่อไม่มีคำว่า "Alpha"
-                Player secondPlayer = new Player();
-                secondPlayer.setName("Beta Player");
-                secondPlayer.setRole("Player");
-                secondPlayer.setCreatedAt(LocalDateTime.now());
-                secondPlayer.setTeam(teams.findById(teamId).orElseThrow());
-                players.saveAndFlush(secondPlayer);
+                // Role เป็น Player
+                Player normalPlayer = new Player();
+                normalPlayer.setName("Beta Player");
+                normalPlayer.setRole("Player");
+                normalPlayer.setCreatedAt(LocalDateTime.now());
+                normalPlayer.setTeam(teams.findById(teamId).orElseThrow());
+                players.saveAndFlush(normalPlayer);
 
-                // เรียก API โดยค้นหาคำว่า "alpha"
-                // IgnoreCase ทำให้ "alpha" ค้นหา "Alpha" ได้
+                // ค้นหาเฉพาะ Role Captain
+                // ใช้ตัวพิมพ์เล็กเพื่อทดสอบ IgnoreCase
                 mvc.perform(
                                 get("/api/v1/teams/{id}/players", teamId)
-                                                .param("name", "alpha")
+                                                .param("role", "captain")
                                                 .param("size", "20"))
                                 .andExpect(status().isOk())
 
@@ -150,7 +150,61 @@ class TeamApiTests {
 
                                 // Player ที่เจอต้องเป็น Alpha Player
                                 .andExpect(jsonPath("$.content[0].name")
-                                                .value("Alpha Player"));
+                                                .value("Alpha Player"))
+
+                                // Role ต้องเป็น Captain
+                                .andExpect(jsonPath("$.content[0].role")
+                                                .value("Captain"));
+        }
+
+        @Test
+        void searchesPlayersByNameAndRoleWithinTeam() throws Exception {
+
+                // สร้าง Team สำหรับทดสอบ
+                Long teamId = createTeam(uniqueName());
+
+                // Player คนที่ตรงทั้งชื่อและ Role
+                Player matchingPlayer = new Player();
+                matchingPlayer.setName("Alpha Captain");
+                matchingPlayer.setRole("Captain");
+                matchingPlayer.setCreatedAt(LocalDateTime.now());
+                matchingPlayer.setTeam(teams.findById(teamId).orElseThrow());
+                players.saveAndFlush(matchingPlayer);
+
+                // ชื่อมี Alpha แต่ Role ไม่ตรง
+                Player wrongRole = new Player();
+                wrongRole.setName("Alpha Player");
+                wrongRole.setRole("Player");
+                wrongRole.setCreatedAt(LocalDateTime.now());
+                wrongRole.setTeam(teams.findById(teamId).orElseThrow());
+                players.saveAndFlush(wrongRole);
+
+                // Role ตรง แต่ชื่อไม่ตรง
+                Player wrongName = new Player();
+                wrongName.setName("Beta Captain");
+                wrongName.setRole("Captain");
+                wrongName.setCreatedAt(LocalDateTime.now());
+                wrongName.setTeam(teams.findById(teamId).orElseThrow());
+                players.saveAndFlush(wrongName);
+
+                // ค้นหาทั้งชื่อ Alpha และ Role Captain
+                mvc.perform(
+                                get("/api/v1/teams/{id}/players", teamId)
+                                                .param("name", "alpha")
+                                                .param("role", "captain")
+                                                .param("size", "20"))
+                                .andExpect(status().isOk())
+
+                                // ต้องเจอเฉพาะคนที่ตรงทั้ง 2 เงื่อนไข
+                                .andExpect(jsonPath("$.totalElements").value(1))
+
+                                // ต้องเป็น Alpha Captain
+                                .andExpect(jsonPath("$.content[0].name")
+                                                .value("Alpha Captain"))
+
+                                // Role ต้องเป็น Captain
+                                .andExpect(jsonPath("$.content[0].role")
+                                                .value("Captain"));
         }
 
         @Test

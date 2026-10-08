@@ -91,15 +91,19 @@ public class TeamController {
             @PathVariable Long id,
 
             // รับชื่อ Player ที่ต้องการค้นหา
-            // ไม่ส่งมาก็ได้ เพราะ required = false
+            // ไม่ส่งมาก็ได้
             @RequestParam(required = false) String name,
+
+            // รับ Role ที่ต้องการค้นหา
+            // ไม่ส่งมาก็ได้
+            @RequestParam(required = false) String role,
 
             // รองรับ pagination และเรียงตามชื่อ Player
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
 
-        // ส่ง Team ID + ชื่อที่ค้นหา + pagination ไปยัง Service
+        // ส่ง Team ID + name + role + pagination ไปยัง Service
         return PageResponse.from(
-                teams.listPlayers(id, name, pageable));
+                teams.listPlayers(id, name, role, pageable));
     }
 
     @PutMapping("/{id}/players/{playerId}")

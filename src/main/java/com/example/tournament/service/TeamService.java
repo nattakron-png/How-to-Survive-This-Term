@@ -19,7 +19,12 @@ public interface TeamService {
 
     void delete(Long id);
 
-    Page<TeamPlayerResponse> listPlayers(Long teamId, Pageable pageable);
+    // แสดง Player ใน Team
+    // name ใช้สำหรับค้นหา Player ตามชื่อ และสามารถเป็น null ได้
+    Page<TeamPlayerResponse> listPlayers(
+            Long teamId,
+            String name,
+            Pageable pageable);
 
     TeamPlayerResponse addPlayer(Long teamId, Long playerId);
 

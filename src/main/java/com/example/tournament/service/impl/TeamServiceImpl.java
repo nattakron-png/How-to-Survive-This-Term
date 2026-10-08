@@ -82,9 +82,39 @@ public class TeamServiceImpl implements TeamService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<TeamPlayerResponse> listPlayers(Long teamId, Pageable pageable) {
+    public Page<TeamPlayerResponse> listPlayers(
+            Long teamId,
+            String name,
+            Pageable pageable) {
+
+        // 1. ตรวจสอบก่อนว่า Team ที่ต้องการค้นหามีอยู่จริง
+        // ถ้าไม่มี → ResourceNotFoundException
         findTeam(teamId);
-        return players.findByTeamId(teamId, pageable).map(mapper::toPlayerResponse);
+
+        // 2. ถ้าไม่ได้ส่งชื่อมา หรือส่งเป็นช่องว่าง
+        // ให้แสดง Player ทุกคนใน Team
+        Page<Player> result;
+
+        if (name == null || name.isBlank()) {
+
+            result = players.findByTeamId(
+                    teamId,
+                    pageable);
+
+        } else {
+
+            // 3. ถ้ามีชื่อที่ค้นหา
+            // trim() ตัดช่องว่างด้านหน้าและด้านหลังออก
+            // แล้วค้นหา Player ที่ชื่อมีคำดังกล่าว
+            result = players.findByTeamIdAndNameContainingIgnoreCase(
+                    teamId,
+                    name.trim(),
+                    pageable);
+        }
+
+        // 4. แปลง Player Entity เป็น TeamPlayerResponse
+        // เพื่อไม่ส่ง Entity ออกไปตรง ๆ จาก API
+        return result.map(mapper::toPlayerResponse);
     }
 
     @Override

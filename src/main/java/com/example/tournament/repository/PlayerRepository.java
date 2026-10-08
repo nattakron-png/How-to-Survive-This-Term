@@ -9,4 +9,6 @@ import com.example.tournament.domain.entity.Player;
 public interface PlayerRepository extends JpaRepository<Player, Long> {
 
     Page<Player> findByTeamId(Long teamId, Pageable pageable);
+
+    Page<Player> findByNameContainingIgnoreCase(String name, Pageable pageable);
 }

@@ -1,5 +1,7 @@
 package com.example.tournament;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -35,7 +37,25 @@ class TeamApiTests {
     private PlayerRepository players;
 
     @Test
-    void createsListsUpdatesAndDeletesTeam() throws Exception {
+    void getTeamReturnsSavedValues() throws Exception {
+        String name = uniqueName();
+        Long id = createTeam(name);
+
+        mvc.perform(get("/api/v1/teams/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id))
+                .andExpect(jsonPath("$.name").value(name))
+                .andExpect(jsonPath("$.description").value(""));
+
+        mvc.perform(get("/api/v1/teams").param("name", name).param("size", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(id))
+                .andExpect(jsonPath("$.content[0].name").value(name));
+    }
+
+    @Test
+    void postTeamPersistsSentValues() throws Exception {
         String name = uniqueName();
         mvc.perform(post("/api/v1/teams").contentType(MediaType.APPLICATION_JSON)
                 .content(teamJson(name, "First description")))
@@ -47,39 +67,77 @@ class TeamApiTests {
         Long id = teams.findByNameContainingIgnoreCase(name, org.springframework.data.domain.Pageable.unpaged())
                 .getContent().getFirst().getId();
 
-        mvc.perform(get("/api/v1/teams").param("name", name).param("size", "5"))
+        mvc.perform(get("/api/v1/teams/{id}", id))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalElements").value(1))
-                .andExpect(jsonPath("$.content[0].id").value(id));
+                .andExpect(jsonPath("$.id").value(id))
+                .andExpect(jsonPath("$.name").value(name))
+                .andExpect(jsonPath("$.description").value("First description"));
+    }
 
+    @Test
+    void putTeamPersistsUpdatedValues() throws Exception {
+        Long id = createTeam(uniqueName());
+        String updatedName = uniqueName();
         mvc.perform(put("/api/v1/teams/{id}", id).contentType(MediaType.APPLICATION_JSON)
-                .content(teamJson(name + " Updated", "Updated description")))
+                .content(teamJson(updatedName, "Updated description")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value(name + " Updated"));
+                .andExpect(jsonPath("$.name").value(updatedName))
+                .andExpect(jsonPath("$.description").value("Updated description"));
 
         mvc.perform(get("/api/v1/teams/{id}", id))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value(updatedName))
                 .andExpect(jsonPath("$.description").value("Updated description"));
+    }
 
+    @Test
+    void deleteTeamMakesItUnavailable() throws Exception {
+        Long id = createTeam(uniqueName());
         mvc.perform(delete("/api/v1/teams/{id}", id)).andExpect(status().isNoContent());
         mvc.perform(get("/api/v1/teams/{id}", id)).andExpect(status().isNotFound());
     }
 
     @Test
-    void rejectsBlankOrDuplicateName() throws Exception {
-        String name = uniqueName();
+    void rejectsBlankName() throws Exception {
         mvc.perform(post("/api/v1/teams").contentType(MediaType.APPLICATION_JSON)
                 .content(teamJson("  ", "")))
                 .andExpect(status().isBadRequest());
+    }
 
-        mvc.perform(post("/api/v1/teams").contentType(MediaType.APPLICATION_JSON)
-                .content(teamJson(name, "")))
-                .andExpect(status().isCreated());
-
+    @Test
+    void rejectsDuplicateNameWhenCreatingTeam() throws Exception {
+        String name = uniqueName();
+        Long originalId = createTeam(name);
         mvc.perform(post("/api/v1/teams").contentType(MediaType.APPLICATION_JSON)
                 .content(teamJson("  " + name.toUpperCase() + "  ", "")))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("Team name already exists"));
+
+        mvc.perform(get("/api/v1/teams").param("name", name))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(originalId))
+                .andExpect(jsonPath("$.content[0].name").value(name));
+    }
+
+    @Test
+    void rejectsDuplicateNameWhenUpdatingTeam() throws Exception {
+        String firstName = uniqueName();
+        Long firstId = createTeam(firstName);
+        String secondName = uniqueName();
+        Long secondId = createTeam(secondName);
+
+        mvc.perform(put("/api/v1/teams/{id}", secondId).contentType(MediaType.APPLICATION_JSON)
+                .content(teamJson("  " + firstName.toUpperCase() + "  ", "")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Team name already exists"));
+
+        mvc.perform(get("/api/v1/teams/{id}", firstId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value(firstName));
+        mvc.perform(get("/api/v1/teams/{id}", secondId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value(secondName));
     }
 
     @Test
@@ -98,19 +156,32 @@ class TeamApiTests {
 
         mvc.perform(get("/api/v1/teams/{id}/players", firstTeamId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalElements").value(1));
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(playerId))
+                .andExpect(jsonPath("$.content[0].teamId").value(firstTeamId));
 
         mvc.perform(put("/api/v1/teams/{id}/players/{playerId}", secondTeamId, playerId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.teamId").value(secondTeamId));
 
         mvc.perform(get("/api/v1/teams/{id}/players", firstTeamId))
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(0));
+        mvc.perform(get("/api/v1/teams/{id}/players", secondTeamId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(playerId))
+                .andExpect(jsonPath("$.content[0].teamId").value(secondTeamId));
+        assertEquals(secondTeamId, players.findById(playerId).orElseThrow().getTeam().getId());
+
         mvc.perform(delete("/api/v1/teams/{id}/players/{playerId}", firstTeamId, playerId))
                 .andExpect(status().isNotFound());
         mvc.perform(delete("/api/v1/teams/{id}/players/{playerId}", secondTeamId, playerId))
                 .andExpect(status().isNoContent());
-        org.junit.jupiter.api.Assertions.assertNull(players.findById(playerId).orElseThrow().getTeam());
+        mvc.perform(get("/api/v1/teams/{id}/players", secondTeamId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+        assertNull(players.findById(playerId).orElseThrow().getTeam());
     }
 
     @Test
@@ -124,7 +195,7 @@ class TeamApiTests {
         Long playerId = players.saveAndFlush(player).getId();
 
         mvc.perform(delete("/api/v1/teams/{id}", teamId)).andExpect(status().isNoContent());
-        org.junit.jupiter.api.Assertions.assertNull(players.findById(playerId).orElseThrow().getTeam());
+        assertNull(players.findById(playerId).orElseThrow().getTeam());
     }
 
     private Long createTeam(String name) throws Exception {

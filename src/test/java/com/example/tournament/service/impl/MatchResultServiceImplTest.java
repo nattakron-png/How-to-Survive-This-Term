@@ -20,6 +20,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import com.example.tournament.domain.entity.Match;
 import com.example.tournament.domain.entity.MatchResult;
 import com.example.tournament.domain.entity.Team;
+import com.example.tournament.domain.enums.MatchStatus;
 import com.example.tournament.dto.request.CreateMatchResultRequest;
 import com.example.tournament.dto.response.MatchResultResponse;
 import com.example.tournament.event.MatchResultRecordedEvent;
@@ -33,16 +34,26 @@ import com.example.tournament.repository.MatchResultRepository;
 @ExtendWith(MockitoExtension.class)
 class MatchResultServiceImplTest {
 
-    @Mock MatchRepository matches;
-    @Mock MatchResultRepository results;
-    @Mock ApplicationEventPublisher events;
+    @Mock
+    MatchRepository matches;
+
+    @Mock
+    MatchResultRepository results;
+
+    @Mock
+    ApplicationEventPublisher events;
 
     MatchResultServiceImpl service;
     Match match;
 
     @BeforeEach
     void setUp() {
-        service = new MatchResultServiceImpl(matches, results, new MatchResultMapper(), events);
+        service = new MatchResultServiceImpl(
+                matches,
+                results,
+                new MatchResultMapper(),
+                events);
+
         match = new Match();
         match.setId(1L);
         match.setMatchNumber(1);
@@ -54,7 +65,9 @@ class MatchResultServiceImplTest {
     void rejectsWhenMatchNotFound() {
         when(matches.findById(1L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> service.record(1L, request(2, 1, 10L)));
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> service.record(1L, request(2, 1, 10L)));
     }
 
     @Test
@@ -62,7 +75,9 @@ class MatchResultServiceImplTest {
         givenMatchWithoutResult();
         when(results.existsByMatchId(1L)).thenReturn(true);
 
-        assertThrows(BusinessException.class, () -> service.record(1L, request(2, 1, 10L)));
+        assertThrows(
+                BusinessException.class,
+                () -> service.record(1L, request(2, 1, 10L)));
     }
 
     @Test
@@ -70,35 +85,73 @@ class MatchResultServiceImplTest {
         match.setTeamB(null);
         givenMatchWithoutResult();
 
-        assertThrows(BusinessException.class, () -> service.record(1L, request(2, 1, 10L)));
+        assertThrows(
+                BusinessException.class,
+                () -> service.record(1L, request(2, 1, 10L)));
+    }
+
+    @Test
+    void rejectsWhenMatchIsNotScheduled() {
+        givenMatchWithoutResult();
+
+        match.setStatus(MatchStatus.PENDING.name());
+
+        assertThrows(
+                BusinessException.class,
+                () -> service.record(1L, request(2, 1, 10L)));
+
+        verify(results, never()).save(any());
+        verify(events, never()).publishEvent(any());
+    }
+
+    @Test
+    void rejectsWhenMatchIsAlreadyCompleted() {
+        givenMatchWithoutResult();
+
+        match.setStatus(MatchStatus.COMPLETED.name());
+
+        assertThrows(
+                BusinessException.class,
+                () -> service.record(1L, request(2, 1, 10L)));
+
+        verify(results, never()).save(any());
+        verify(events, never()).publishEvent(any());
     }
 
     @Test
     void rejectsDraw() {
-        givenMatchWithoutResult();
+        givenScheduledMatch();
 
-        assertThrows(ValidationException.class, () -> service.record(1L, request(1, 1, 10L)));
+        assertThrows(
+                ValidationException.class,
+                () -> service.record(1L, request(1, 1, 10L)));
     }
 
     @Test
     void rejectsWinnerNotInMatch() {
-        givenMatchWithoutResult();
+        givenScheduledMatch();
 
-        assertThrows(ValidationException.class, () -> service.record(1L, request(2, 1, 30L)));
+        assertThrows(
+                ValidationException.class,
+                () -> service.record(1L, request(2, 1, 30L)));
     }
 
     @Test
     void rejectsWinnerWithLowerScore() {
-        givenMatchWithoutResult();
+        givenScheduledMatch();
 
-        assertThrows(ValidationException.class, () -> service.record(1L, request(3, 1, 20L)));
+        assertThrows(
+                ValidationException.class,
+                () -> service.record(1L, request(3, 1, 20L)));
     }
 
     @Test
     void doesNotSaveOrPublishWhenRejected() {
-        givenMatchWithoutResult();
+        givenScheduledMatch();
 
-        assertThrows(ValidationException.class, () -> service.record(1L, request(1, 1, 10L)));
+        assertThrows(
+                ValidationException.class,
+                () -> service.record(1L, request(1, 1, 10L)));
 
         verify(results, never()).save(any());
         verify(events, never()).publishEvent(any());
@@ -106,24 +159,45 @@ class MatchResultServiceImplTest {
 
     @Test
     void savesResultAndPublishesEvent() {
-        givenMatchWithoutResult();
-        when(results.save(any(MatchResult.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        givenScheduledMatch();
 
-        MatchResultResponse response = service.record(1L, request(2, 1, 10L));
+        when(results.save(any(MatchResult.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        MatchResultResponse response =
+                service.record(1L, request(2, 1, 10L));
 
         assertEquals(10L, response.winnerTeamId());
         assertEquals(2, response.teamAScore());
         assertEquals("COMPLETED", match.getStatus());
-        verify(events).publishEvent(new MatchResultRecordedEvent(1L, 10L));
+
+        verify(events)
+                .publishEvent(new MatchResultRecordedEvent(1L, 10L));
     }
 
     private void givenMatchWithoutResult() {
-        when(matches.findById(1L)).thenReturn(Optional.of(match));
-        lenient().when(results.existsByMatchId(1L)).thenReturn(false);
+        when(matches.findById(1L))
+                .thenReturn(Optional.of(match));
+
+        lenient()
+                .when(results.existsByMatchId(1L))
+                .thenReturn(false);
     }
 
-    private static CreateMatchResultRequest request(int scoreA, int scoreB, long winnerId) {
-        return new CreateMatchResultRequest(scoreA, scoreB, winnerId);
+    private void givenScheduledMatch() {
+        givenMatchWithoutResult();
+        match.setStatus(MatchStatus.SCHEDULED.name());
+    }
+
+    private static CreateMatchResultRequest request(
+            int scoreA,
+            int scoreB,
+            long winnerId) {
+
+        return new CreateMatchResultRequest(
+                scoreA,
+                scoreB,
+                winnerId);
     }
 
     private static Team team(Long id) {

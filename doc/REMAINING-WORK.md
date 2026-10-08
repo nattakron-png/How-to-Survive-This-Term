@@ -80,7 +80,7 @@
 
 ### คนที่ 2: วัชรพล (Team + Player)
 
-- [ ] **Player CRUD** `/api/v1/players` (GET list + pagination, GET by id, POST, PUT, DELETE) สร้างผู้เล่นที่ยังไม่มีทีมได้ (`team_id` เป็น NULL) ตามบรีฟข้อ 5
+- [x] **Player CRUD** `/api/v1/players` (GET list + pagination/ค้นชื่อ, GET by id, POST, PUT, DELETE) สร้างผู้เล่นที่ยังไม่มีทีมได้ (`team_id` เป็น NULL) พร้อม integration tests; การแจ้งเตือนชื่อคล้ายอัตโนมัติยังไม่ทำ
 - [ ] **Swagger** เพิ่ม springdoc-openapi เวอร์ชันที่รองรับ Spring Boot ที่ใช้ ให้เปิด `/swagger-ui.html` ได้ (ใบงานบังคับ) และควรทำเป็นอย่างแรก เพราะทุกคนจะได้ใช้ทดสอบ API
 - [ ] **Team API รองรับเกมและโลโก้** เพิ่ม `gameId`, `logoUrl` ใน `TeamRequest`/`TeamResponse` ทีมใหม่ต้องมีเกม (เกมไม่มีอยู่ → 404)
 - [ ] **อัปโหลดโลโก้** interface `FileStorageService` + implementation (เครื่อง local สำหรับพัฒนา, Supabase Storage หรือ Cloudinary สำหรับ Deploy) ใช้กับทีม, รายการแข่ง และเกม

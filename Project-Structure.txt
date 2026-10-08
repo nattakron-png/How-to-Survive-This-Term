@@ -1,0 +1,18 @@
+ตัวอย่าง Package Structure
+com.example.project
+├── config/
+├── controller/
+│   ├── api/          # RestController
+│   └── web/          # Thymeleaf Controller
+├── service/
+│   ├── impl/
+├── repository/
+├── domain/
+│   ├── entity/
+│   ├── enums/
+├── dto/
+│   ├── request/
+│   ├── response/
+├── mapper/
+├── exception/
+└── common/

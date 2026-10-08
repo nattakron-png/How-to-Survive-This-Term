@@ -2,9 +2,12 @@
 
 เอกสารนี้สรุปจาก `develop` ล่าสุด ว่าอะไรเสร็จแล้ว และแต่ละคนต้องทำอะไรต่อ ก่อนเริ่มงานทุกครั้งให้ `git pull origin develop` และประกาศในกลุ่มว่ากำลังทำชิ้นไหน จะได้ไม่ทำซ้ำกัน
 
+**ขอบเขตการใช้งาน:** ผู้ชมใช้เว็บติดตามรายการและผลการแข่งขัน ผู้จัดเป็นผู้กรอกและจัดการทีม ผู้เล่น รายการ และผลในหลังบ้าน คำว่า “เพิ่มทีมเข้ารายการ” ในเอกสารนี้หมายถึงผู้จัดเลือกทีมมาใส่รายการ ไม่ใช่การเปิดรับสมัครจากผู้เล่นหรือทีม
+
 คู่มือละเอียดของบางโมดูลอยู่ในไฟล์แยก ควร commit ไว้ใน `doc/` ทั้งหมด
 
 - `doc/database-module-guide.md`: ฐานข้อมูล, V9–V10, Game API, Auth (คณิศร)
+- `doc/team-player-module-guide.md`: Team/Player API, Docker, Swagger และงานเชื่อมโมดูล (วัชรพล)
 - `doc/bracket-module-guide.md`: สร้างสายการแข่งและ Strategy (คนที่ 4)
 - `doc/match-result-api.md`: API บันทึกผลแมตช์ที่เสร็จแล้ว
 
@@ -16,7 +19,7 @@
 | --- | --- |
 | Migration V1–V10 และ Entity ทุกตัว (รวม `Game`, `FreeFireGame`, `FreeFireGameResult`, `TournamentPlacementPoint`, `TournamentFormat`) | คณิศร |
 | Team API พร้อม Pagination, Validation และ Integration Test | วัชรพล |
-| Docker (`Dockerfile`, `compose.yaml` พร้อม PostgreSQL และ test profile), `.env.example`, `doc/setup.md` | วัชรพล |
+| Docker (`Dockerfile`, `compose.yaml` พร้อม PostgreSQL และ test profile), `.env.example`, `doc/team-player-module-guide.md` | วัชรพล |
 | `GlobalExceptionHandler` และรูปแบบ error กลาง (`ApiError`) | วัชรพล |
 | บันทึกผลแมตช์แพ้คัดออก + ส่งผู้ชนะไปแมตช์ถัดไป (Observer) + Unit Test 13 ข้อ + เอกสาร API | ณัฐกร |
 | `ValidationException` (400), `MatchStatus`, `MatchRepository`, `MatchResultRepository` | ณัฐกร |
@@ -77,7 +80,7 @@
 
 ### คนที่ 2: วัชรพล (Team + Player)
 
-- [ ] **Player CRUD** `/api/v1/players` (GET list + pagination, GET by id, POST, PUT, DELETE) สร้างผู้เล่นที่ยังไม่มีทีมได้ (`team_id` เป็น NULL) ตามบรีฟข้อ 5
+- [x] **Player CRUD** `/api/v1/players` (GET list + pagination/ค้นชื่อ, GET by id, POST, PUT, DELETE) สร้างผู้เล่นที่ยังไม่มีทีมได้ (`team_id` เป็น NULL) พร้อม integration tests; การแจ้งเตือนชื่อคล้ายอัตโนมัติยังไม่ทำ
 - [ ] **Swagger** เพิ่ม springdoc-openapi เวอร์ชันที่รองรับ Spring Boot ที่ใช้ ให้เปิด `/swagger-ui.html` ได้ (ใบงานบังคับ) และควรทำเป็นอย่างแรก เพราะทุกคนจะได้ใช้ทดสอบ API
 - [ ] **Team API รองรับเกมและโลโก้** เพิ่ม `gameId`, `logoUrl` ใน `TeamRequest`/`TeamResponse` ทีมใหม่ต้องมีเกม (เกมไม่มีอยู่ → 404)
 - [ ] **อัปโหลดโลโก้** interface `FileStorageService` + implementation (เครื่อง local สำหรับพัฒนา, Supabase Storage หรือ Cloudinary สำหรับ Deploy) ใช้กับทีม, รายการแข่ง และเกม

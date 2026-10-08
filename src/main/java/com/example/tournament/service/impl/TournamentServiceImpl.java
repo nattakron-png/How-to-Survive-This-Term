@@ -12,6 +12,7 @@ import com.example.tournament.domain.entity.TournamentPlacementPoint;
 import com.example.tournament.domain.enums.TournamentFormat;
 import com.example.tournament.domain.enums.TournamentStatus;
 import com.example.tournament.dto.request.TournamentRequest;
+import com.example.tournament.dto.response.PlacementPointResponse;
 import com.example.tournament.dto.response.TournamentResponse;
 import com.example.tournament.exception.BusinessException;
 import com.example.tournament.exception.ResourceNotFoundException;
@@ -20,7 +21,6 @@ import com.example.tournament.repository.GameRepository;
 import com.example.tournament.repository.TournamentPlacementPointRepository;
 import com.example.tournament.repository.TournamentRepository;
 import com.example.tournament.service.TournamentService;
-import com.example.tournament.repository.TournamentPlacementPointRepository;
 
 @Service
 @Transactional
@@ -37,8 +37,7 @@ public class TournamentServiceImpl implements TournamentService {
 
         this.tournamentRepository = tournamentRepository;
         this.gameRepository = gameRepository;
-        this.tournamentPlacementPointRepository =
-                tournamentPlacementPointRepository;
+        this.tournamentPlacementPointRepository = tournamentPlacementPointRepository;
     }
 
     @Override
@@ -50,8 +49,7 @@ public class TournamentServiceImpl implements TournamentService {
         }
 
         Game game = gameRepository.findById(request.getGameId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Game not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Game not found"));
 
         validateTournamentRequest(request, game);
 
@@ -69,8 +67,7 @@ public class TournamentServiceImpl implements TournamentService {
         tournament.setStatus(TournamentStatus.UPCOMING);
         tournament.setCreatedAt(LocalDateTime.now());
 
-        Tournament savedTournament =
-                tournamentRepository.saveAndFlush(tournament);
+        Tournament savedTournament = tournamentRepository.saveAndFlush(tournament);
 
         /*
          * Free Fire / POINTS tournament
@@ -109,13 +106,13 @@ public class TournamentServiceImpl implements TournamentService {
 
         if (!name.equalsIgnoreCase(tournament.getName())
                 && tournamentRepository.existsByName(name)) {
+
             throw new BusinessException(
                     "Tournament name already exists");
         }
 
         Game game = gameRepository.findById(request.getGameId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Game not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Game not found"));
 
         validateTournamentRequest(request, game);
 
@@ -147,18 +144,41 @@ public class TournamentServiceImpl implements TournamentService {
     }
 
     /**
+     * Get FFWS Placement Points.
+     *
+     * Returns placement points for the specified tournament
+     * in ascending placement order.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<PlacementPointResponse> getPlacementPoints(
+            Long tournamentId) {
+
+        // ตรวจสอบก่อนว่า Tournament มีอยู่จริง
+        findTournament(tournamentId);
+
+        return tournamentPlacementPointRepository
+                .findByTournamentIdOrderByPlacementAsc(tournamentId)
+                .stream()
+                .map(point -> new PlacementPointResponse(
+                        point.getPlacement(),
+                        point.getPoints()))
+                .toList();
+    }
+
+    /**
      * Create FFWS Placement Points.
      *
      * Placement:
-     * 1  = 12 points
-     * 2  = 9 points
-     * 3  = 8 points
-     * 4  = 7 points
-     * 5  = 6 points
-     * 6  = 5 points
-     * 7  = 4 points
-     * 8  = 3 points
-     * 9  = 2 points
+     * 1 = 12 points
+     * 2 = 9 points
+     * 3 = 8 points
+     * 4 = 7 points
+     * 5 = 6 points
+     * 6 = 5 points
+     * 7 = 4 points
+     * 8 = 3 points
+     * 9 = 2 points
      * 10 = 1 point
      * 11 = 0 points
      * 12 = 0 points
@@ -172,8 +192,7 @@ public class TournamentServiceImpl implements TournamentService {
 
         for (short placement = 1; placement <= 12; placement++) {
 
-            TournamentPlacementPoint placementPoint =
-                    new TournamentPlacementPoint();
+            TournamentPlacementPoint placementPoint = new TournamentPlacementPoint();
 
             placementPoint.setTournament(tournament);
             placementPoint.setPlacement(placement);
@@ -207,8 +226,7 @@ public class TournamentServiceImpl implements TournamentService {
                     "Tournament format is required");
         }
 
-        boolean isFreeFire =
-                "FREE_FIRE".equalsIgnoreCase(game.getCode());
+        boolean isFreeFire = "FREE_FIRE".equalsIgnoreCase(game.getCode());
 
         if (isFreeFire
                 && request.getFormat() != TournamentFormat.POINTS) {
@@ -231,8 +249,7 @@ public class TournamentServiceImpl implements TournamentService {
                     "POINTS tournaments require totalGames");
         }
 
-        if (request.getFormat()
-                == TournamentFormat.SINGLE_ELIMINATION
+        if (request.getFormat() == TournamentFormat.SINGLE_ELIMINATION
                 && request.getTotalGames() != null) {
 
             throw new ValidationException(
@@ -242,9 +259,8 @@ public class TournamentServiceImpl implements TournamentService {
 
     private Tournament findTournament(Long id) {
         return tournamentRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Tournament not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Tournament not found: " + id));
     }
 
     private TournamentResponse toResponse(

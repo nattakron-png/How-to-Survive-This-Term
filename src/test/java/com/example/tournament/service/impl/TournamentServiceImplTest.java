@@ -1,13 +1,14 @@
 package com.example.tournament.service.impl;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -21,7 +22,9 @@ import com.example.tournament.domain.entity.Tournament;
 import com.example.tournament.domain.entity.TournamentPlacementPoint;
 import com.example.tournament.domain.enums.TournamentFormat;
 import com.example.tournament.dto.request.TournamentRequest;
+import com.example.tournament.dto.response.PlacementPointResponse;
 import com.example.tournament.exception.BusinessException;
+import com.example.tournament.exception.ResourceNotFoundException;
 import com.example.tournament.exception.ValidationException;
 import com.example.tournament.repository.GameRepository;
 import com.example.tournament.repository.TournamentRepository;
@@ -253,6 +256,72 @@ class TournamentServiceImplTest {
 
                 verify(tournamentPlacementPoints, times(12))
                                 .save(any(TournamentPlacementPoint.class));
+        }
+
+        @Test
+        void returnsFfwsPlacementPointsInAscendingOrder() {
+
+                Tournament tournament = new Tournament();
+                tournament.setId(1L);
+
+                TournamentPlacementPoint first =
+                                placementPoint(tournament, (short) 1, (short) 12);
+
+                TournamentPlacementPoint second =
+                                placementPoint(tournament, (short) 2, (short) 9);
+
+                TournamentPlacementPoint third =
+                                placementPoint(tournament, (short) 3, (short) 8);
+
+                when(tournaments.findById(1L))
+                                .thenReturn(Optional.of(tournament));
+
+                when(tournamentPlacementPoints
+                                .findByTournamentIdOrderByPlacementAsc(1L))
+                                .thenReturn(List.of(first, second, third));
+
+                List<PlacementPointResponse> result =
+                                service.getPlacementPoints(1L);
+
+                assertEquals(3, result.size());
+
+                assertEquals((short) 1, result.get(0).placement());
+                assertEquals((short) 12, result.get(0).points());
+
+                assertEquals((short) 2, result.get(1).placement());
+                assertEquals((short) 9, result.get(1).points());
+
+                assertEquals((short) 3, result.get(2).placement());
+                assertEquals((short) 8, result.get(2).points());
+
+                verify(tournamentPlacementPoints)
+                                .findByTournamentIdOrderByPlacementAsc(1L);
+        }
+
+        @Test
+        void rejectsPlacementPointsWhenTournamentDoesNotExist() {
+
+                when(tournaments.findById(999L))
+                                .thenReturn(Optional.empty());
+
+                assertThrows(
+                                ResourceNotFoundException.class,
+                                () -> service.getPlacementPoints(999L));
+        }
+
+        private static TournamentPlacementPoint placementPoint(
+                        Tournament tournament,
+                        Short placement,
+                        Short points) {
+
+                TournamentPlacementPoint placementPoint =
+                                new TournamentPlacementPoint();
+
+                placementPoint.setTournament(tournament);
+                placementPoint.setPlacement(placement);
+                placementPoint.setPoints(points);
+
+                return placementPoint;
         }
 
         private static TournamentRequest request(

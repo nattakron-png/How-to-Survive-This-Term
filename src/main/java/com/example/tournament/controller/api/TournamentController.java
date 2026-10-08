@@ -15,8 +15,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.example.tournament.dto.request.TournamentRequest;
+import com.example.tournament.dto.response.PlacementPointResponse;
 import com.example.tournament.dto.response.TournamentResponse;
 import com.example.tournament.service.TournamentService;
+import com.example.tournament.dto.response.PlacementPointResponse;
 
 import jakarta.validation.Valid;
 
@@ -38,6 +40,13 @@ public class TournamentController {
     @GetMapping("/{id}")
     public TournamentResponse get(@PathVariable Long id) {
         return tournaments.getById(id);
+    }
+
+    @GetMapping("/{id}/placement-points")
+    public List<PlacementPointResponse> getPlacementPoints(
+            @PathVariable Long id) {
+
+        return tournaments.getPlacementPoints(id);
     }
 
     @PostMapping

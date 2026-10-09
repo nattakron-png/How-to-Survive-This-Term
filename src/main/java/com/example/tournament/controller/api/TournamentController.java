@@ -11,15 +11,15 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-import org.springframework.web.bind.annotation.RequestParam;
 
+import com.example.tournament.domain.enums.TournamentStatus;
 import com.example.tournament.dto.request.TournamentRequest;
 import com.example.tournament.dto.response.PlacementPointResponse;
 import com.example.tournament.dto.response.TournamentResponse;
 import com.example.tournament.service.TournamentService;
-import com.example.tournament.dto.response.PlacementPointResponse;
 
 import jakarta.validation.Valid;
 
@@ -35,15 +35,29 @@ public class TournamentController {
 
     @GetMapping
     public List<TournamentResponse> list(
-            @RequestParam(required = false) String name) {
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) TournamentStatus status) {
 
-        // Return all tournaments when no search keyword is provided.
-        if (name == null || name.isBlank()) {
+        // ตรวจสอบว่าผู้ใช้ระบุคำค้นหาชื่อหรือไม่
+        boolean hasName = name != null && !name.isBlank();
+
+        // ถ้าไม่ได้ระบุชื่อและสถานะ ให้แสดงทัวร์นาเมนต์ทั้งหมด
+        if (!hasName && status == null) {
             return tournaments.getAll();
         }
 
-        // Otherwise, return tournaments matching the keyword.
-        return tournaments.searchByName(name);
+        // ถ้าระบุเฉพาะชื่อ ให้ค้นหาจากชื่อ
+        if (status == null) {
+            return tournaments.searchByName(name);
+        }
+
+        // ถ้าระบุเฉพาะสถานะ ให้ค้นหาจากสถานะ
+        if (!hasName) {
+            return tournaments.getByStatus(status);
+        }
+
+        // ถ้าระบุทั้งชื่อและสถานะ ให้ค้นหาด้วยเงื่อนไขทั้งสอง
+        return tournaments.searchByNameAndStatus(name, status);
     }
 
     @GetMapping("/{id}")
@@ -89,3 +103,4 @@ public class TournamentController {
         return ResponseEntity.noContent().build();
     }
 }
+

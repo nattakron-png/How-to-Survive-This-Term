@@ -5,12 +5,14 @@ import java.util.List;
 import com.example.tournament.dto.request.TournamentRequest;
 import com.example.tournament.dto.response.TournamentResponse;
 import com.example.tournament.dto.response.PlacementPointResponse;
+import com.example.tournament.domain.enums.TournamentStatus;
 
 public interface TournamentService {
 
     TournamentResponse create(TournamentRequest request);
 
     List<TournamentResponse> getAll();
+    List<TournamentResponse> searchByName(String name);
 
     TournamentResponse getById(Long id);
 
@@ -20,6 +22,9 @@ public interface TournamentService {
 
     List<PlacementPointResponse> getPlacementPoints(Long tournamentId);
 
-    // Search tournaments using part of the tournament name.
-    List<TournamentResponse> searchByName(String name);
+    List<TournamentResponse> getByStatus(TournamentStatus status);
+
+    List<TournamentResponse> searchByNameAndStatus(
+            String name,
+            TournamentStatus status);
 }

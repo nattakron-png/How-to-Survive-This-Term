@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import com.example.tournament.dto.request.TournamentRequest;
 import com.example.tournament.dto.response.PlacementPointResponse;
@@ -33,8 +34,16 @@ public class TournamentController {
     }
 
     @GetMapping
-    public List<TournamentResponse> list() {
-        return tournaments.getAll();
+    public List<TournamentResponse> list(
+            @RequestParam(required = false) String name) {
+
+        // Return all tournaments when no search keyword is provided.
+        if (name == null || name.isBlank()) {
+            return tournaments.getAll();
+        }
+
+        // Otherwise, return tournaments matching the keyword.
+        return tournaments.searchByName(name);
     }
 
     @GetMapping("/{id}")

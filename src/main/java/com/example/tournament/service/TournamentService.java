@@ -19,4 +19,7 @@ public interface TournamentService {
     void delete(Long id);
 
     List<PlacementPointResponse> getPlacementPoints(Long tournamentId);
+
+    // Search tournaments using part of the tournament name.
+    List<TournamentResponse> searchByName(String name);
 }

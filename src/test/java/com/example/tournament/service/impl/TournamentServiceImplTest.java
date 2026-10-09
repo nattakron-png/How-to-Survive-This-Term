@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -29,6 +30,7 @@ import com.example.tournament.exception.ValidationException;
 import com.example.tournament.repository.GameRepository;
 import com.example.tournament.repository.TournamentRepository;
 import com.example.tournament.repository.TournamentPlacementPointRepository;
+import com.example.tournament.dto.response.TournamentResponse;
 
 @ExtendWith(MockitoExtension.class)
 class TournamentServiceImplTest {
@@ -264,14 +266,11 @@ class TournamentServiceImplTest {
                 Tournament tournament = new Tournament();
                 tournament.setId(1L);
 
-                TournamentPlacementPoint first =
-                                placementPoint(tournament, (short) 1, (short) 12);
+                TournamentPlacementPoint first = placementPoint(tournament, (short) 1, (short) 12);
 
-                TournamentPlacementPoint second =
-                                placementPoint(tournament, (short) 2, (short) 9);
+                TournamentPlacementPoint second = placementPoint(tournament, (short) 2, (short) 9);
 
-                TournamentPlacementPoint third =
-                                placementPoint(tournament, (short) 3, (short) 8);
+                TournamentPlacementPoint third = placementPoint(tournament, (short) 3, (short) 8);
 
                 when(tournaments.findById(1L))
                                 .thenReturn(Optional.of(tournament));
@@ -280,8 +279,7 @@ class TournamentServiceImplTest {
                                 .findByTournamentIdOrderByPlacementAsc(1L))
                                 .thenReturn(List.of(first, second, third));
 
-                List<PlacementPointResponse> result =
-                                service.getPlacementPoints(1L);
+                List<PlacementPointResponse> result = service.getPlacementPoints(1L);
 
                 assertEquals(3, result.size());
 
@@ -309,13 +307,44 @@ class TournamentServiceImplTest {
                                 () -> service.getPlacementPoints(999L));
         }
 
+        @Test
+        void searchesTournamentsByPartialNameIgnoringCase() {
+                Tournament freeFireTournament = new Tournament();
+                freeFireTournament.setId(1L);
+                freeFireTournament.setName("Free Fire Championship");
+
+                // Set the game because the response includes the game ID.
+                freeFireTournament.setGame(freeFire);
+
+                when(tournaments.findByNameContainingIgnoreCase("fire"))
+                                .thenReturn(List.of(freeFireTournament));
+
+                List<TournamentResponse> result = service.searchByName("fire");
+
+                assertEquals(1, result.size());
+                assertEquals("Free Fire Championship", result.get(0).name());
+
+                verify(tournaments).findByNameContainingIgnoreCase("fire");
+        }
+
+        @Test
+        void trimsSearchKeywordBeforeSearching() {
+                when(tournaments.findByNameContainingIgnoreCase("ROV"))
+                                .thenReturn(List.of());
+
+                List<TournamentResponse> result = service.searchByName("  ROV  ");
+
+                assertEquals(0, result.size());
+
+                verify(tournaments).findByNameContainingIgnoreCase("ROV");
+        }
+
         private static TournamentPlacementPoint placementPoint(
                         Tournament tournament,
                         Short placement,
                         Short points) {
 
-                TournamentPlacementPoint placementPoint =
-                                new TournamentPlacementPoint();
+                TournamentPlacementPoint placementPoint = new TournamentPlacementPoint();
 
                 placementPoint.setTournament(tournament);
                 placementPoint.setPlacement(placement);
@@ -355,6 +384,3 @@ class TournamentServiceImplTest {
                 return game;
         }
 }
-
-
-

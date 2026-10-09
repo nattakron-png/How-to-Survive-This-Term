@@ -26,257 +26,271 @@ import com.example.tournament.service.TournamentService;
 @Transactional
 public class TournamentServiceImpl implements TournamentService {
 
-    private final TournamentRepository tournamentRepository;
-    private final GameRepository gameRepository;
-    private final TournamentPlacementPointRepository tournamentPlacementPointRepository;
+        private final TournamentRepository tournamentRepository;
+        private final GameRepository gameRepository;
+        private final TournamentPlacementPointRepository tournamentPlacementPointRepository;
 
-    public TournamentServiceImpl(
-            TournamentRepository tournamentRepository,
-            GameRepository gameRepository,
-            TournamentPlacementPointRepository tournamentPlacementPointRepository) {
+        public TournamentServiceImpl(
+                        TournamentRepository tournamentRepository,
+                        GameRepository gameRepository,
+                        TournamentPlacementPointRepository tournamentPlacementPointRepository) {
 
-        this.tournamentRepository = tournamentRepository;
-        this.gameRepository = gameRepository;
-        this.tournamentPlacementPointRepository = tournamentPlacementPointRepository;
-    }
-
-    @Override
-    public TournamentResponse create(TournamentRequest request) {
-        String name = request.getName().trim();
-
-        if (tournamentRepository.existsByName(name)) {
-            throw new BusinessException("Tournament name already exists");
+                this.tournamentRepository = tournamentRepository;
+                this.gameRepository = gameRepository;
+                this.tournamentPlacementPointRepository = tournamentPlacementPointRepository;
         }
 
-        Game game = gameRepository.findById(request.getGameId())
-                .orElseThrow(() -> new ResourceNotFoundException("Game not found"));
+        @Override
+        public TournamentResponse create(TournamentRequest request) {
+                String name = request.getName().trim();
 
-        validateTournamentRequest(request, game);
+                if (tournamentRepository.existsByName(name)) {
+                        throw new BusinessException("Tournament name already exists");
+                }
 
-        Tournament tournament = new Tournament();
+                Game game = gameRepository.findById(request.getGameId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Game not found"));
 
-        tournament.setName(name);
-        tournament.setDescription(request.getDescription());
-        tournament.setGame(game);
-        tournament.setFormat(request.getFormat());
-        tournament.setTotalGames(request.getTotalGames());
-        tournament.setPointsPerKill(request.getPointsPerKill());
-        tournament.setLogoUrl(request.getLogoUrl());
-        tournament.setStartDate(request.getStartDate());
-        tournament.setEndDate(request.getEndDate());
-        tournament.setStatus(TournamentStatus.UPCOMING);
-        tournament.setCreatedAt(LocalDateTime.now());
+                validateTournamentRequest(request, game);
 
-        Tournament savedTournament = tournamentRepository.saveAndFlush(tournament);
+                Tournament tournament = new Tournament();
 
-        /*
-         * Free Fire / POINTS tournament
-         * จะสร้าง Placement Points อัตโนมัติ
+                tournament.setName(name);
+                tournament.setDescription(request.getDescription());
+                tournament.setGame(game);
+                tournament.setFormat(request.getFormat());
+                tournament.setTotalGames(request.getTotalGames());
+                tournament.setPointsPerKill(request.getPointsPerKill());
+                tournament.setLogoUrl(request.getLogoUrl());
+                tournament.setStartDate(request.getStartDate());
+                tournament.setEndDate(request.getEndDate());
+                tournament.setStatus(TournamentStatus.UPCOMING);
+                tournament.setCreatedAt(LocalDateTime.now());
+
+                Tournament savedTournament = tournamentRepository.saveAndFlush(tournament);
+
+                /*
+                 * Free Fire / POINTS tournament
+                 * จะสร้าง Placement Points อัตโนมัติ
+                 */
+                if (savedTournament.getFormat() == TournamentFormat.POINTS) {
+                        createPlacementPoints(savedTournament);
+                }
+
+                return toResponse(savedTournament);
+        }
+
+        @Override
+        @Transactional(readOnly = true)
+        public List<TournamentResponse> getAll() {
+                return tournamentRepository.findAll()
+                                .stream()
+                                .map(this::toResponse)
+                                .toList();
+        }
+
+        @Override
+        @Transactional(readOnly = true)
+        public List<TournamentResponse> searchByName(String name) {
+                // Remove unnecessary spaces before searching.
+                String keyword = name.trim();
+
+                // Search by partial name without case sensitivity.
+                return tournamentRepository
+                                .findByNameContainingIgnoreCase(keyword)
+                                .stream()
+                                .map(this::toResponse)
+                                .toList();
+        }
+
+        @Override
+        @Transactional(readOnly = true)
+        public TournamentResponse getById(Long id) {
+                return toResponse(findTournament(id));
+        }
+
+        @Override
+        public TournamentResponse update(
+                        Long id,
+                        TournamentRequest request) {
+
+                Tournament tournament = findTournament(id);
+
+                String name = request.getName().trim();
+
+                if (!name.equalsIgnoreCase(tournament.getName())
+                                && tournamentRepository.existsByName(name)) {
+
+                        throw new BusinessException(
+                                        "Tournament name already exists");
+                }
+
+                Game game = gameRepository.findById(request.getGameId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Game not found"));
+
+                validateTournamentRequest(request, game);
+
+                tournament.setName(name);
+                tournament.setDescription(request.getDescription());
+                tournament.setGame(game);
+                tournament.setFormat(request.getFormat());
+                tournament.setTotalGames(request.getTotalGames());
+                tournament.setPointsPerKill(request.getPointsPerKill());
+                tournament.setLogoUrl(request.getLogoUrl());
+                tournament.setStartDate(request.getStartDate());
+                tournament.setEndDate(request.getEndDate());
+
+                return toResponse(
+                                tournamentRepository.saveAndFlush(tournament));
+        }
+
+        @Override
+        public void delete(Long id) {
+                Tournament tournament = findTournament(id);
+
+                if (tournament.getStatus() != TournamentStatus.UPCOMING) {
+                        throw new BusinessException(
+                                        "Tournament can only be deleted when it is UPCOMING");
+                }
+
+                tournamentRepository.delete(tournament);
+                tournamentRepository.flush();
+        }
+
+        /**
+         * Get FFWS Placement Points.
+         *
+         * Returns placement points for the specified tournament
+         * in ascending placement order.
          */
-        if (savedTournament.getFormat() == TournamentFormat.POINTS) {
-            createPlacementPoints(savedTournament);
+        @Override
+        @Transactional(readOnly = true)
+        public List<PlacementPointResponse> getPlacementPoints(
+                        Long tournamentId) {
+
+                // ตรวจสอบก่อนว่า Tournament มีอยู่จริง
+                findTournament(tournamentId);
+
+                return tournamentPlacementPointRepository
+                                .findByTournamentIdOrderByPlacementAsc(tournamentId)
+                                .stream()
+                                .map(point -> new PlacementPointResponse(
+                                                point.getPlacement(),
+                                                point.getPoints()))
+                                .toList();
         }
 
-        return toResponse(savedTournament);
-    }
+        /**
+         * Create FFWS Placement Points.
+         *
+         * Placement:
+         * 1 = 12 points
+         * 2 = 9 points
+         * 3 = 8 points
+         * 4 = 7 points
+         * 5 = 6 points
+         * 6 = 5 points
+         * 7 = 4 points
+         * 8 = 3 points
+         * 9 = 2 points
+         * 10 = 1 point
+         * 11 = 0 points
+         * 12 = 0 points
+         */
+        private void createPlacementPoints(Tournament tournament) {
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<TournamentResponse> getAll() {
-        return tournamentRepository.findAll()
-                .stream()
-                .map(this::toResponse)
-                .toList();
-    }
+                short[] points = {
+                                12, 9, 8, 7, 6, 5,
+                                4, 3, 2, 1, 0, 0
+                };
 
-    @Override
-    @Transactional(readOnly = true)
-    public TournamentResponse getById(Long id) {
-        return toResponse(findTournament(id));
-    }
+                for (short placement = 1; placement <= 12; placement++) {
 
-    @Override
-    public TournamentResponse update(
-            Long id,
-            TournamentRequest request) {
+                        TournamentPlacementPoint placementPoint = new TournamentPlacementPoint();
 
-        Tournament tournament = findTournament(id);
+                        placementPoint.setTournament(tournament);
+                        placementPoint.setPlacement(placement);
+                        placementPoint.setPoints(points[placement - 1]);
 
-        String name = request.getName().trim();
-
-        if (!name.equalsIgnoreCase(tournament.getName())
-                && tournamentRepository.existsByName(name)) {
-
-            throw new BusinessException(
-                    "Tournament name already exists");
+                        tournamentPlacementPointRepository.save(
+                                        placementPoint);
+                }
         }
 
-        Game game = gameRepository.findById(request.getGameId())
-                .orElseThrow(() -> new ResourceNotFoundException("Game not found"));
+        private void validateTournamentRequest(
+                        TournamentRequest request,
+                        Game game) {
 
-        validateTournamentRequest(request, game);
+                if (request.getStartDate() == null
+                                || request.getEndDate() == null) {
 
-        tournament.setName(name);
-        tournament.setDescription(request.getDescription());
-        tournament.setGame(game);
-        tournament.setFormat(request.getFormat());
-        tournament.setTotalGames(request.getTotalGames());
-        tournament.setPointsPerKill(request.getPointsPerKill());
-        tournament.setLogoUrl(request.getLogoUrl());
-        tournament.setStartDate(request.getStartDate());
-        tournament.setEndDate(request.getEndDate());
+                        throw new ValidationException(
+                                        "Start date and end date are required");
+                }
 
-        return toResponse(
-                tournamentRepository.saveAndFlush(tournament));
-    }
+                if (request.getEndDate()
+                                .isBefore(request.getStartDate())) {
 
-    @Override
-    public void delete(Long id) {
-        Tournament tournament = findTournament(id);
+                        throw new ValidationException(
+                                        "End date must be on or after start date");
+                }
 
-        if (tournament.getStatus() != TournamentStatus.UPCOMING) {
-            throw new BusinessException(
-                    "Tournament can only be deleted when it is UPCOMING");
+                if (request.getFormat() == null) {
+                        throw new ValidationException(
+                                        "Tournament format is required");
+                }
+
+                boolean isFreeFire = "FREE_FIRE".equalsIgnoreCase(game.getCode());
+
+                if (isFreeFire
+                                && request.getFormat() != TournamentFormat.POINTS) {
+
+                        throw new ValidationException(
+                                        "Free Fire tournaments must use POINTS format");
+                }
+
+                if (!isFreeFire
+                                && request.getFormat() == TournamentFormat.POINTS) {
+
+                        throw new ValidationException(
+                                        "Only Free Fire tournaments can use POINTS format");
+                }
+
+                if (request.getFormat() == TournamentFormat.POINTS
+                                && request.getTotalGames() == null) {
+
+                        throw new ValidationException(
+                                        "POINTS tournaments require totalGames");
+                }
+
+                if (request.getFormat() == TournamentFormat.SINGLE_ELIMINATION
+                                && request.getTotalGames() != null) {
+
+                        throw new ValidationException(
+                                        "SINGLE_ELIMINATION tournaments must not have totalGames");
+                }
         }
 
-        tournamentRepository.delete(tournament);
-        tournamentRepository.flush();
-    }
-
-    /**
-     * Get FFWS Placement Points.
-     *
-     * Returns placement points for the specified tournament
-     * in ascending placement order.
-     */
-    @Override
-    @Transactional(readOnly = true)
-    public List<PlacementPointResponse> getPlacementPoints(
-            Long tournamentId) {
-
-        // ตรวจสอบก่อนว่า Tournament มีอยู่จริง
-        findTournament(tournamentId);
-
-        return tournamentPlacementPointRepository
-                .findByTournamentIdOrderByPlacementAsc(tournamentId)
-                .stream()
-                .map(point -> new PlacementPointResponse(
-                        point.getPlacement(),
-                        point.getPoints()))
-                .toList();
-    }
-
-    /**
-     * Create FFWS Placement Points.
-     *
-     * Placement:
-     * 1 = 12 points
-     * 2 = 9 points
-     * 3 = 8 points
-     * 4 = 7 points
-     * 5 = 6 points
-     * 6 = 5 points
-     * 7 = 4 points
-     * 8 = 3 points
-     * 9 = 2 points
-     * 10 = 1 point
-     * 11 = 0 points
-     * 12 = 0 points
-     */
-    private void createPlacementPoints(Tournament tournament) {
-
-        short[] points = {
-                12, 9, 8, 7, 6, 5,
-                4, 3, 2, 1, 0, 0
-        };
-
-        for (short placement = 1; placement <= 12; placement++) {
-
-            TournamentPlacementPoint placementPoint = new TournamentPlacementPoint();
-
-            placementPoint.setTournament(tournament);
-            placementPoint.setPlacement(placement);
-            placementPoint.setPoints(points[placement - 1]);
-
-            tournamentPlacementPointRepository.save(
-                    placementPoint);
-        }
-    }
-
-    private void validateTournamentRequest(
-            TournamentRequest request,
-            Game game) {
-
-        if (request.getStartDate() == null
-                || request.getEndDate() == null) {
-
-            throw new ValidationException(
-                    "Start date and end date are required");
+        private Tournament findTournament(Long id) {
+                return tournamentRepository.findById(id)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Tournament not found: " + id));
         }
 
-        if (request.getEndDate()
-                .isBefore(request.getStartDate())) {
+        private TournamentResponse toResponse(
+                        Tournament tournament) {
 
-            throw new ValidationException(
-                    "End date must be on or after start date");
+                return new TournamentResponse(
+                                tournament.getId(),
+                                tournament.getName(),
+                                tournament.getDescription(),
+                                tournament.getGame().getId(),
+                                tournament.getFormat(),
+                                tournament.getTotalGames(),
+                                tournament.getPointsPerKill(),
+                                tournament.getLogoUrl(),
+                                tournament.getStartDate(),
+                                tournament.getEndDate(),
+                                tournament.getStatus());
         }
-
-        if (request.getFormat() == null) {
-            throw new ValidationException(
-                    "Tournament format is required");
-        }
-
-        boolean isFreeFire = "FREE_FIRE".equalsIgnoreCase(game.getCode());
-
-        if (isFreeFire
-                && request.getFormat() != TournamentFormat.POINTS) {
-
-            throw new ValidationException(
-                    "Free Fire tournaments must use POINTS format");
-        }
-
-        if (!isFreeFire
-                && request.getFormat() == TournamentFormat.POINTS) {
-
-            throw new ValidationException(
-                    "Only Free Fire tournaments can use POINTS format");
-        }
-
-        if (request.getFormat() == TournamentFormat.POINTS
-                && request.getTotalGames() == null) {
-
-            throw new ValidationException(
-                    "POINTS tournaments require totalGames");
-        }
-
-        if (request.getFormat() == TournamentFormat.SINGLE_ELIMINATION
-                && request.getTotalGames() != null) {
-
-            throw new ValidationException(
-                    "SINGLE_ELIMINATION tournaments must not have totalGames");
-        }
-    }
-
-    private Tournament findTournament(Long id) {
-        return tournamentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Tournament not found: " + id));
-    }
-
-    private TournamentResponse toResponse(
-            Tournament tournament) {
-
-        return new TournamentResponse(
-                tournament.getId(),
-                tournament.getName(),
-                tournament.getDescription(),
-                tournament.getGame().getId(),
-                tournament.getFormat(),
-                tournament.getTotalGames(),
-                tournament.getPointsPerKill(),
-                tournament.getLogoUrl(),
-                tournament.getStartDate(),
-                tournament.getEndDate(),
-                tournament.getStatus());
-    }
 }

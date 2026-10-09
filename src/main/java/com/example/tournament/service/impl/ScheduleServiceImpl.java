@@ -12,6 +12,7 @@ import com.example.tournament.domain.entity.Team;
 import com.example.tournament.domain.entity.Tournament;
 import com.example.tournament.domain.entity.TournamentTeam;
 import com.example.tournament.domain.enums.TournamentFormat;
+import com.example.tournament.domain.enums.TournamentStatus;
 import com.example.tournament.dto.response.MatchResponse;
 import com.example.tournament.dto.response.ScheduleResponse;
 import com.example.tournament.exception.BusinessException;
@@ -50,7 +51,7 @@ public class ScheduleServiceImpl implements ScheduleService {
         Tournament tournament = findTournament(tournamentId);
 
         // 2. ต้องยังไม่เริ่ม → 409
-        if (!"UPCOMING".equals(tournament.getStatus())) {
+        if (tournament.getStatus() != TournamentStatus.UPCOMING) {
             throw new BusinessException("Schedule can only be created before the tournament starts");
         }
 
@@ -75,7 +76,7 @@ public class ScheduleServiceImpl implements ScheduleService {
         }
 
         int created = strategy.createSchedule(tournament, teams);
-        tournament.setStatus("ONGOING");
+        tournament.setStatus(TournamentStatus.ONGOING);
         return new ScheduleResponse(tournamentId, format.name(), created);
     }
 

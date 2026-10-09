@@ -20,6 +20,7 @@ import com.example.tournament.domain.entity.Team;
 import com.example.tournament.domain.entity.Tournament;
 import com.example.tournament.domain.entity.TournamentTeam;
 import com.example.tournament.domain.enums.TournamentFormat;
+import com.example.tournament.domain.enums.TournamentStatus;
 import com.example.tournament.dto.response.ScheduleResponse;
 import com.example.tournament.exception.BusinessException;
 import com.example.tournament.exception.ResourceNotFoundException;
@@ -46,7 +47,7 @@ class ScheduleServiceImplTest {
         service = new ScheduleServiceImpl(tournaments, tournamentTeams, matches, new MatchMapper(),
                 List.of(singleElimination));
         tournament = new Tournament();
-        tournament.setStatus("UPCOMING");
+        tournament.setStatus(TournamentStatus.UPCOMING);
     }
 
     @Test
@@ -58,7 +59,7 @@ class ScheduleServiceImplTest {
 
     @Test
     void rejectsWhenTournamentAlreadyStarted() {
-        tournament.setStatus("ONGOING");
+        tournament.setStatus(TournamentStatus.ONGOING);
         when(tournaments.findById(1L)).thenReturn(Optional.of(tournament));
 
         assertThrows(BusinessException.class, () -> service.createSchedule(1L));
@@ -101,7 +102,7 @@ class ScheduleServiceImplTest {
 
         assertEquals(1, response.created());
         assertEquals("SINGLE_ELIMINATION", response.format());
-        assertEquals("ONGOING", tournament.getStatus());
+        assertEquals(TournamentStatus.ONGOING, tournament.getStatus());
         verify(singleElimination).createSchedule(eq(tournament), anyList());
     }
 

@@ -9,7 +9,7 @@
 | ส่วน | สถานะปัจจุบัน | ไฟล์หลัก |
 | --- | --- | --- |
 | Team CRUD | ทำแล้ว: ชื่อ/คำอธิบายทีม, แบ่งหน้า, สร้าง/แก้/ลบ | `TeamController`, `TeamServiceImpl`, `TeamMapper`, `TeamApiTests` |
-| จัดสมาชิกทีม | ทำแล้ว: ดูสมาชิก, เพิ่ม/ย้าย/ถอดผู้เล่น โดยคง URL เดิม | `TeamMembershipController`, `TeamMembershipServiceImpl`, `TeamMembershipMapper`, `TeamApiTests` |
+| จัดสมาชิกทีม | ทำแล้ว: ดูสมาชิกพร้อมกรองชื่อ/role, เพิ่ม/ย้าย/ถอดผู้เล่น โดยคง URL เดิม | `TeamMembershipController`, `TeamMembershipServiceImpl`, `TeamMembershipMapper`, `TeamApiTests` |
 | Docker + PostgreSQL + Flyway | ทำแล้ว: build Java 21, รัน PostgreSQL 17, ฐานข้อมูลทดสอบแยก | `Dockerfile`, `compose.yaml`, `application.properties` |
 | Swagger/OpenAPI | ทำแล้ว: เปิด Swagger UI และ JSON spec ได้ | `pom.xml`, `README.md` |
 | Player CRUD | ทำแล้ว: รายการ/ค้นชื่อ, ดูตาม id, สร้าง, แก้, ลบ และกำหนดทีมแบบไม่บังคับ | `PlayerController`, `PlayerServiceImpl`, `PlayerApiTests` |
@@ -32,7 +32,7 @@ Base path `/api/v1/teams`:
 | POST | `/api/v1/teams` | สร้างทีม | 201 พร้อม `Location` |
 | PUT | `/api/v1/teams/{id}` | แก้ชื่อ/คำอธิบาย | 200 |
 | DELETE | `/api/v1/teams/{id}` | ลบทีม | 204 |
-| GET | `/api/v1/teams/{id}/players?page=0&size=20` | ดูสมาชิกทีม | 200 |
+| GET | `/api/v1/teams/{id}/players?name=alice&role=Captain&page=0&size=20` | ดูสมาชิกทีม; `name` และ `role` ไม่บังคับ กรองร่วมกันได้ | 200 |
 | PUT | `/api/v1/teams/{id}/players/{playerId}` | เพิ่มหรือย้ายผู้เล่นที่มีอยู่เข้าทีม | 200 |
 | DELETE | `/api/v1/teams/{id}/players/{playerId}` | ถอดผู้เล่นออกจากทีม โดยไม่ลบผู้เล่น | 204 |
 
@@ -173,5 +173,7 @@ docker compose --profile test stop test-db
 `TeamApiTests` ผ่าน 9/9, `PlayerApiTests` ผ่าน 7/7 และ `PlayerTeamIntegrationTests` ผ่าน 1/1; เมื่อ 8 ต.ค. รันทั้งโปรเจกต์ **31 tests, 0 failures/errors/skipped** ด้วย `docker compose --profile test run --rm --build tests` หลัง rebuild แอปพัฒนา ตรวจ `/actuator/health` ได้ `UP` และ `/v3/api-docs` มี `/api/v1/players` กับ `/api/v1/players/{id}` แล้ว ยังไม่ได้ยิง Player POST/PUT/DELETE กับฐานข้อมูลพัฒนาเพื่อไม่เพิ่มข้อมูลทดสอบใน volume หลัก
 
 หลังแยก Team CRUD ออกจากการจัดสมาชิก วันที่ 9 ต.ค. 2026 รัน Mockito ของ `TeamServiceImplTest`, `TeamMembershipServiceImplTest` และ `PlayerServiceImplTest` ผ่าน 9/9 ด้วย Maven/JDK 26 ในเครื่อง จากนั้นรัน `docker compose --profile test run --rm --build tests` กับ PostgreSQL test-db บน Java 21 ผ่านทั้งโปรเจกต์ 66 tests, 0 failures/errors/skipped แล้วหยุด test-db; URL และผลตอบกลับของ Team/Player API ยังผ่าน integration tests เดิม ไม่ได้เพิ่มกฎสมาชิกประจำทัวร์หรือแก้โมดูล Tournament
+
+หลังรับ `origin/develop` ที่ `23691b9` เข้าสู่ branch refactor เดียวกัน ตัวกรอง `name`/`role` ที่เพิ่มใน develop ถูกย้ายจาก Team CRUD ไป `TeamMembershipServiceImpl` โดยคงพฤติกรรมเดิม: ชื่อค้นบางส่วนแบบไม่สนตัวพิมพ์, role เทียบตรงแบบไม่สนตัวพิมพ์, ส่งทั้งคู่ต้องตรงทั้งคู่ และตัดช่องว่างหัวท้าย ก่อนแก้ เทสรวม 111 กรณีล้ม 2 กรณีเพราะ refactor ยังไม่ส่งตัวกรอง; หลังแก้รัน Docker + PostgreSQL ผ่าน **111/111**, 0 failures/errors/skipped และหยุด test-db แล้ว เทสที่ล้มตรวจ requirement ใหม่ถูกต้อง สาเหตุมาจากโค้ด refactor
 
 ก่อนส่ง PR ให้ตรวจ: Swagger แสดง endpoint ใหม่จริง, status/error ตรงกฎ, `git diff --check`, tests ผ่านบนโค้ดที่ส่ง, README/คู่มือนี้ตรงพฤติกรรมล่าสุด และแจ้งเจ้าของโมดูลที่ใช้ไฟล์ร่วม `.env` เป็นค่า local ไม่ commit และไม่ใส่รหัสผ่านหรือ token ในเอกสาร/PR

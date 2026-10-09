@@ -8,12 +8,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.tournament.domain.entity.Team;
+import com.example.tournament.domain.entity.Game;
 import com.example.tournament.dto.request.TeamRequest;
 import com.example.tournament.dto.response.TeamResponse;
 import com.example.tournament.exception.BusinessException;
 import com.example.tournament.exception.ResourceNotFoundException;
+import com.example.tournament.exception.ValidationException;
 import com.example.tournament.mapper.TeamMapper;
 import com.example.tournament.repository.TeamRepository;
+import com.example.tournament.repository.GameRepository;
 import com.example.tournament.service.TeamService;
 
 @Service
@@ -21,10 +24,12 @@ import com.example.tournament.service.TeamService;
 public class TeamServiceImpl implements TeamService {
 
     private final TeamRepository teams;
+    private final GameRepository games;
     private final TeamMapper mapper;
 
-    public TeamServiceImpl(TeamRepository teams, TeamMapper mapper) {
+    public TeamServiceImpl(TeamRepository teams, GameRepository games, TeamMapper mapper) {
         this.teams = teams;
+        this.games = games;
         this.mapper = mapper;
     }
 
@@ -45,13 +50,18 @@ public class TeamServiceImpl implements TeamService {
 
     @Override
     public TeamResponse create(TeamRequest request) {
+        if (request.gameId() == null) {
+            throw new ValidationException("Game is required for a new team");
+        }
         String name = request.name().trim();
         if (teams.existsByNameIgnoreCase(name)) {
             throw new BusinessException("Team name already exists");
         }
+        Game game = findGame(request.gameId());
         Team team = new Team();
         team.setName(name);
         team.setDescription(request.description());
+        team.setGame(game);
         team.setCreatedAt(LocalDateTime.now());
         return mapper.toResponse(teams.saveAndFlush(team));
     }
@@ -62,6 +72,15 @@ public class TeamServiceImpl implements TeamService {
         String name = request.name().trim();
         if (teams.existsByNameIgnoreCaseAndIdNot(name, id)) {
             throw new BusinessException("Team name already exists");
+        }
+        if (request.gameId() != null) {
+            Game requestedGame = findGame(request.gameId());
+            if (team.getGame() != null && !team.getGame().getId().equals(requestedGame.getId())) {
+                throw new BusinessException("Team game cannot be changed; create a new team for another game");
+            }
+            if (team.getGame() == null) {
+                team.setGame(requestedGame);
+            }
         }
         team.setName(name);
         team.setDescription(request.description());
@@ -78,5 +97,10 @@ public class TeamServiceImpl implements TeamService {
     private Team findTeam(Long id) {
         return teams.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Team not found: " + id));
+    }
+
+    private Game findGame(Long id) {
+        return games.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Game not found: " + id));
     }
 }

@@ -10,6 +10,7 @@ public class TeamMapper {
 
     public TeamResponse toResponse(Team team) {
         return new TeamResponse(team.getId(), team.getName(), team.getDescription(),
+                team.getGame() == null ? null : team.getGame().getId(),
                 team.getLogoUrl(), team.getCreatedAt());
     }
 

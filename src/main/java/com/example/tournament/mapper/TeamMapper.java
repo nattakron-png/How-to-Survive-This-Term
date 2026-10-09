@@ -9,7 +9,8 @@ import com.example.tournament.dto.response.TeamResponse;
 public class TeamMapper {
 
     public TeamResponse toResponse(Team team) {
-        return new TeamResponse(team.getId(), team.getName(), team.getDescription(), team.getCreatedAt());
+        return new TeamResponse(team.getId(), team.getName(), team.getDescription(),
+                team.getLogoUrl(), team.getCreatedAt());
     }
 
 }

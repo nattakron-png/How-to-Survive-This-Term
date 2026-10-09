@@ -6,5 +6,6 @@ public record TeamResponse(
         Long id,
         String name,
         String description,
+        String logoUrl,
         LocalDateTime createdAt) {
 }

@@ -13,7 +13,9 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --system app \
-    && useradd --system --gid app app
+    && useradd --system --gid app app \
+    && mkdir -p /app/uploads/logos \
+    && chown -R app:app /app/uploads
 WORKDIR /app
 COPY --from=build /workspace/target/tournament-0.0.1-SNAPSHOT.jar app.jar
 USER app

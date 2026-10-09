@@ -7,15 +7,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.tournament.domain.entity.Player;
 import com.example.tournament.domain.entity.Team;
 import com.example.tournament.dto.request.TeamRequest;
-import com.example.tournament.dto.response.TeamPlayerResponse;
 import com.example.tournament.dto.response.TeamResponse;
 import com.example.tournament.exception.BusinessException;
 import com.example.tournament.exception.ResourceNotFoundException;
 import com.example.tournament.mapper.TeamMapper;
-import com.example.tournament.repository.PlayerRepository;
 import com.example.tournament.repository.TeamRepository;
 import com.example.tournament.service.TeamService;
 
@@ -24,12 +21,10 @@ import com.example.tournament.service.TeamService;
 public class TeamServiceImpl implements TeamService {
 
     private final TeamRepository teams;
-    private final PlayerRepository players;
     private final TeamMapper mapper;
 
-    public TeamServiceImpl(TeamRepository teams, PlayerRepository players, TeamMapper mapper) {
+    public TeamServiceImpl(TeamRepository teams, TeamMapper mapper) {
         this.teams = teams;
-        this.players = players;
         this.mapper = mapper;
     }
 
@@ -80,39 +75,8 @@ public class TeamServiceImpl implements TeamService {
         teams.flush();
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public Page<TeamPlayerResponse> listPlayers(Long teamId, Pageable pageable) {
-        findTeam(teamId);
-        return players.findByTeamId(teamId, pageable).map(mapper::toPlayerResponse);
-    }
-
-    @Override
-    public TeamPlayerResponse addPlayer(Long teamId, Long playerId) {
-        Team team = findTeam(teamId);
-        Player player = findPlayer(playerId);
-        player.setTeam(team);
-        return mapper.toPlayerResponse(players.save(player));
-    }
-
-    @Override
-    public void removePlayer(Long teamId, Long playerId) {
-        findTeam(teamId);
-        Player player = findPlayer(playerId);
-        if (player.getTeam() == null || !teamId.equals(player.getTeam().getId())) {
-            throw new ResourceNotFoundException("Player is not in this team: " + playerId);
-        }
-        player.setTeam(null);
-        players.save(player);
-    }
-
     private Team findTeam(Long id) {
         return teams.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Team not found: " + id));
-    }
-
-    private Player findPlayer(Long id) {
-        return players.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Player not found: " + id));
     }
 }

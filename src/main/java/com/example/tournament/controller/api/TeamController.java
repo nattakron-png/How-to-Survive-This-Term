@@ -18,7 +18,6 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.example.tournament.dto.request.TeamRequest;
 import com.example.tournament.dto.response.PageResponse;
-import com.example.tournament.dto.response.TeamPlayerResponse;
 import com.example.tournament.dto.response.TeamResponse;
 import com.example.tournament.service.TeamService;
 
@@ -64,20 +63,4 @@ public class TeamController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/{id}/players")
-    public PageResponse<TeamPlayerResponse> listPlayers(@PathVariable Long id,
-            @PageableDefault(size = 20, sort = "name") Pageable pageable) {
-        return PageResponse.from(teams.listPlayers(id, pageable));
-    }
-
-    @PutMapping("/{id}/players/{playerId}")
-    public TeamPlayerResponse addPlayer(@PathVariable Long id, @PathVariable Long playerId) {
-        return teams.addPlayer(id, playerId);
-    }
-
-    @DeleteMapping("/{id}/players/{playerId}")
-    public ResponseEntity<Void> removePlayer(@PathVariable Long id, @PathVariable Long playerId) {
-        teams.removePlayer(id, playerId);
-        return ResponseEntity.noContent().build();
-    }
 }

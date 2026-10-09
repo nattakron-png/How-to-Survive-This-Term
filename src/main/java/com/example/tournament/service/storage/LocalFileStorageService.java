@@ -2,14 +2,16 @@ package com.example.tournament.service.storage;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.awt.image.BufferedImage;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.UUID;
+import java.util.Iterator;
 import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -93,10 +95,25 @@ public class LocalFileStorageService implements FileStorageService {
     }
 
     private void validateImage(byte[] content) {
-        try {
-            BufferedImage image = ImageIO.read(new ByteArrayInputStream(content));
-            if (image == null || image.getWidth() > 4096 || image.getHeight() > 4096) {
-                throw new ValidationException("Logo image must be at most 4096 x 4096 pixels");
+        try (ImageInputStream input = ImageIO.createImageInputStream(new ByteArrayInputStream(content))) {
+            if (input == null) {
+                throw new ValidationException("Logo is not a valid image");
+            }
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
+            if (!readers.hasNext()) {
+                throw new ValidationException("Logo is not a valid image");
+            }
+            ImageReader reader = readers.next();
+            try {
+                reader.setInput(input);
+                if (reader.getWidth(0) > 4096 || reader.getHeight(0) > 4096) {
+                    throw new ValidationException("Logo image must be at most 4096 x 4096 pixels");
+                }
+                if (reader.read(0) == null) {
+                    throw new ValidationException("Logo is not a valid image");
+                }
+            } finally {
+                reader.dispose();
             }
         } catch (IOException exception) {
             throw new ValidationException("Logo is not a valid image");

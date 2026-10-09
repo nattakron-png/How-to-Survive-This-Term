@@ -8,13 +8,14 @@
 
 | ส่วน | สถานะปัจจุบัน | ไฟล์หลัก |
 | --- | --- | --- |
-| Team CRUD + จัดสมาชิก | ทำแล้ว: ชื่อ/คำอธิบายทีม, แบ่งหน้า, เพิ่ม ย้าย ถอดผู้เล่น | `TeamController`, `TeamServiceImpl`, `TeamMapper`, `TeamApiTests` |
+| Team CRUD | ทำแล้ว: ชื่อ/คำอธิบายทีม, แบ่งหน้า, สร้าง/แก้/ลบ | `TeamController`, `TeamServiceImpl`, `TeamMapper`, `TeamApiTests` |
+| จัดสมาชิกทีม | ทำแล้ว: ดูสมาชิก, เพิ่ม/ย้าย/ถอดผู้เล่น โดยคง URL เดิม | `TeamMembershipController`, `TeamMembershipServiceImpl`, `TeamMembershipMapper`, `TeamApiTests` |
 | Docker + PostgreSQL + Flyway | ทำแล้ว: build Java 21, รัน PostgreSQL 17, ฐานข้อมูลทดสอบแยก | `Dockerfile`, `compose.yaml`, `application.properties` |
 | Swagger/OpenAPI | ทำแล้ว: เปิด Swagger UI และ JSON spec ได้ | `pom.xml`, `README.md` |
 | Player CRUD | ทำแล้ว: รายการ/ค้นชื่อ, ดูตาม id, สร้าง, แก้, ลบ และกำหนดทีมแบบไม่บังคับ | `PlayerController`, `PlayerServiceImpl`, `PlayerApiTests` |
 | Team API รองรับเกมและโลโก้ | ยังไม่ทำใน API; V9 และ `Team` Entity มี `game_id`/`logo_url` แล้ว | `V9__add_games_and_tournament_format.sql`, `TeamRequest`, `TeamResponse` |
 | Upload โลโก้ + Deploy | ยังไม่ทำ; ต้องตกลงที่เก็บไฟล์และเป้าหมาย deploy กับทีม | งานต่อใน `REMAINING-WORK.md` |
-| Unit test Service + Use Case | เริ่ม Mockito unit test ของ `TeamServiceImpl` แล้ว 1 กรณี (สร้างทีมชื่อซ้ำ); Use Case ยังไม่ทำ | `TeamServiceImplTest`, `use-case-description.md` |
+| Unit test Service + Use Case | Mockito ของ Team CRUD 2 กรณี, สมาชิกทีม 3 กรณี, Player CRUD 4 กรณี; Use Case ยังไม่ทำ | `TeamServiceImplTest`, `TeamMembershipServiceImplTest`, `PlayerServiceImplTest`, `use-case-description.md` |
 
 งาน Game API/Auth, Tournament, สายการแข่งขัน และผล Free Fire มีเจ้าของโมดูลอื่นตาม `REMAINING-WORK.md` ให้ประสานก่อนแก้ไฟล์หรือกฎร่วม
 
@@ -108,6 +109,8 @@ HTTP/Swagger → Controller + @Valid Request DTO
 
 ตัวอย่าง `POST /api/v1/teams`: `TeamController.create` รับ `TeamRequest`, `TeamServiceImpl.create` trim ชื่อและตรวจซ้ำ, `TeamRepository.saveAndFlush` บันทึก, `TeamMapper.toResponse` เลือกฟิลด์ตอบ, Controller ตอบ 201 และ `Location` `GlobalExceptionHandler` รับ exception จาก validation/service/ฐานข้อมูลและแปลงเป็น 400/404/409
 
+**ขอบเขตคลาสหลังแยกหน้าที่:** `TeamController` → `TeamService`/`TeamServiceImpl` → `TeamRepository`/`TeamMapper` ดูแลข้อมูลทีม; `TeamMembershipController` → `TeamMembershipService`/`TeamMembershipServiceImpl` → `PlayerRepository`/`TeamMembershipMapper` ดูแลความสัมพันธ์สมาชิก; `PlayerController` → `PlayerService`/`PlayerServiceImpl` → `PlayerRepository`/`PlayerMapper` ดูแลข้อมูลผู้เล่นและ `teamId` ปัจจุบัน Controller ไม่เรียก Repository ตรง ส่วน endpoint `/api/v1/teams/{id}/players` ทั้งสาม method ยังใช้ URL และ response เดิมเพื่อไม่กระทบผู้เรียก
+
 `teams.id` และ `players.id` สร้างโดยฐานข้อมูล ผู้เรียกไม่ต้องกำหนดเอง `players.name`/`role` บังคับ แต่ `team_id` เว้นว่างได้ `PUT /teams/{id}/players/{playerId}` ตั้ง `player.team` เพื่อเพิ่มหรือย้ายทีม; DELETE ความสัมพันธ์ตั้ง `player.team = null` โดยเก็บผู้เล่นไว้ หากลบทีม migration V4 ตั้ง `players.team_id` เป็น NULL ด้วย ผู้เล่น **หนึ่ง id** มี `team_id` ได้ค่าเดียว จึงไม่ปรากฏพร้อมกันในสองทีมจากความสัมพันธ์นี้ แต่คนจริงคนเดียวอาจถูกบันทึกเป็นผู้เล่นสองแถวคนละ id ได้จนกว่าจะกำหนดวิธีตรวจตัวตนตามหัวข้อด้านบน
 
 `TeamResponse` ปัจจุบันตอบเพียง `id`, `name`, `description`, `createdAt`; Entity มี `game`/`logoUrl` แล้วแต่ API ยังไม่ใช้ ส่วน `tournament_teams` (V6) และ `matches` (V7) อ้างทีม ไม่ได้อ้างผู้เล่นโดยตรง เกม Fighting Game มี `min_players = 1` ใน V9 หากใช้ schema เดิม ผู้จัดอาจสร้างทีมสมาชิก 1 คนแล้วเลือกเข้ารายการ; ถ้าต้องการให้คู่แข่งเป็นผู้เล่นเดี่ยวโดยตรง ต้องตกลงกับทีมก่อนเปลี่ยน schema/หน้าแสดงผล
@@ -140,7 +143,7 @@ HTTP/Swagger → Controller + @Valid Request DTO
 ## 5. ลำดับลงมือทำของคนที่ 2
 
 1. **ต่อ Team API กับเกมและโลโก้:** เพิ่ม `gameId`/`logoUrl` ใน Request/Response/Mapper/Service ตรวจ id เกมที่ไม่มีจริง → 404 และรักษาข้อมูลทีมเก่าที่เกมยังว่างตามข้อตกลงกับทีม
-2. **เพิ่ม unit tests ของ TeamServiceImpl:** ทดสอบกฎชื่อซ้ำ, เกมไม่มีจริง, ย้าย/ถอดผู้เล่น และกรณี conflict ที่ตกลงกับทีม โดยไม่แทน integration tests เดิม
+2. **เพิ่ม unit tests ตามหน้าที่เมื่อมีกฎใหม่:** `TeamServiceImplTest` ทดสอบ Team CRUD/เกมไม่มีจริงในอนาคต; `TeamMembershipServiceImplTest` ทดสอบการเพิ่ม ย้าย ถอดสมาชิก; `PlayerServiceImplTest` ทดสอบ Player CRUD โดยไม่แทน integration tests เดิม
 3. **Upload/Deploy/Use Case:** ลงมือหลังตกลงขอบเขตกับเจ้าของ Game/Tournament/frontend; ทำ Use Case Diagram และ `use-case-description.md` จากพฤติกรรม API ที่เสร็จจริง
 4. **ตรวจคนซ้ำให้ละเอียดขึ้นถ้าทีมยืนยัน:** ปัจจุบันมีเพียงค้นชื่อบางส่วน; แนวทาง normalize ชื่อ/แจ้งเตือนและข้อมูลประกอบตัวตนยังไม่ทำ
 
@@ -169,6 +172,6 @@ docker compose --profile test stop test-db
 
 `TeamApiTests` ผ่าน 9/9, `PlayerApiTests` ผ่าน 7/7 และ `PlayerTeamIntegrationTests` ผ่าน 1/1; เมื่อ 8 ต.ค. รันทั้งโปรเจกต์ **31 tests, 0 failures/errors/skipped** ด้วย `docker compose --profile test run --rm --build tests` หลัง rebuild แอปพัฒนา ตรวจ `/actuator/health` ได้ `UP` และ `/v3/api-docs` มี `/api/v1/players` กับ `/api/v1/players/{id}` แล้ว ยังไม่ได้ยิง Player POST/PUT/DELETE กับฐานข้อมูลพัฒนาเพื่อไม่เพิ่มข้อมูลทดสอบใน volume หลัก
 
-หลังรับ `develop` ล่าสุด วันที่ 9 ต.ค. รันทั้งโปรเจกต์ผ่าน 57 tests แล้ว จากนั้นเริ่ม `TeamServiceImplTest` แบบ Mockito แยกกรณีชื่อทีมซ้ำ: จำลอง `TeamRepository.existsByNameIgnoreCase` ให้ตอบ `true`, ตรวจว่า Service trim ชื่อก่อนถาม Repository, โยน `BusinessException` และไม่เรียก `saveAndFlush` เทสต์เฉพาะกรณีนี้ผ่าน 1/1 ด้วย `mvn -B '-Dtest=TeamServiceImplTest' test`; ยังไม่ได้รันทั้งโปรเจกต์ซ้ำหลังเพิ่มเทสต์นี้
+หลังแยก Team CRUD ออกจากการจัดสมาชิก วันที่ 9 ต.ค. 2026 รัน Mockito ของ `TeamServiceImplTest`, `TeamMembershipServiceImplTest` และ `PlayerServiceImplTest` ผ่าน 9/9 ด้วย Maven/JDK 26 ในเครื่อง จากนั้นรัน `docker compose --profile test run --rm --build tests` กับ PostgreSQL test-db บน Java 21 ผ่านทั้งโปรเจกต์ 66 tests, 0 failures/errors/skipped แล้วหยุด test-db; URL และผลตอบกลับของ Team/Player API ยังผ่าน integration tests เดิม ไม่ได้เพิ่มกฎสมาชิกประจำทัวร์หรือแก้โมดูล Tournament
 
 ก่อนส่ง PR ให้ตรวจ: Swagger แสดง endpoint ใหม่จริง, status/error ตรงกฎ, `git diff --check`, tests ผ่านบนโค้ดที่ส่ง, README/คู่มือนี้ตรงพฤติกรรมล่าสุด และแจ้งเจ้าของโมดูลที่ใช้ไฟล์ร่วม `.env` เป็นค่า local ไม่ commit และไม่ใส่รหัสผ่านหรือ token ในเอกสาร/PR

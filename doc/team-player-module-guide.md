@@ -14,9 +14,11 @@
 | Player CRUD | ทำแล้ว: รายการ/ค้นชื่อ, ดูตาม id, สร้าง, แก้, ลบ และกำหนดทีมแบบไม่บังคับ | `PlayerController`, `PlayerServiceImpl`, `PlayerApiTests` |
 | Team API รองรับเกมและโลโก้ | ยังไม่ทำใน API; V9 และ `Team` Entity มี `game_id`/`logo_url` แล้ว | `V9__add_games_and_tournament_format.sql`, `TeamRequest`, `TeamResponse` |
 | Upload โลโก้ + Deploy | ยังไม่ทำ; ต้องตกลงที่เก็บไฟล์และเป้าหมาย deploy กับทีม | งานต่อใน `REMAINING-WORK.md` |
-| Unit test Service + Use Case | ยังไม่ทำ; ปัจจุบันมี Team/Player API integration tests | `TeamApiTests`, `PlayerApiTests`, `use-case-description.md` |
+| Unit test Service + Use Case | เริ่ม Mockito unit test ของ `TeamServiceImpl` แล้ว 1 กรณี (สร้างทีมชื่อซ้ำ); Use Case ยังไม่ทำ | `TeamServiceImplTest`, `use-case-description.md` |
 
 งาน Game API/Auth, Tournament, สายการแข่งขัน และผล Free Fire มีเจ้าของโมดูลอื่นตาม `REMAINING-WORK.md` ให้ประสานก่อนแก้ไฟล์หรือกฎร่วม
+
+การประเมิน SOLID และหลักการออกแบบของโมดูลนี้พร้อมจุดที่ยังอ้างว่าเคร่งครัดไม่ได้ ดูที่ [solid-analysis.md](solid-analysis.md) ส่วนของคนที่ 2
 
 ### API ที่มีแล้ว
 
@@ -165,6 +167,8 @@ docker compose --profile test stop test-db
 | สร้างผู้เล่นสอง id ชื่อเดียวกัน | สร้างได้ทั้งสอง; ค้นชื่อพบสองรายการ ไม่ถือว่าคนจริงคนเดียวกันอัตโนมัติ | ผ่าน |
 | `PlayerTeamIntegrationTests`: สร้างผู้เล่นผ่าน Player API แล้วเพิ่ม/ย้าย/ถอดทีมผ่าน Team API | GET Player และ GET สมาชิกทีมสะท้อน `teamId` เดียวกันทุกขั้น; หลังถอดผู้เล่นยังอยู่แต่ไม่มีทีม | ผ่าน |
 
-`TeamApiTests` ผ่าน 9/9, `PlayerApiTests` ผ่าน 7/7 และ `PlayerTeamIntegrationTests` ผ่าน 1/1; รอบล่าสุดรันทั้งโปรเจกต์ **31 tests, 0 failures/errors/skipped** ด้วย `docker compose --profile test run --rm --build tests` หลัง rebuild แอปพัฒนา ตรวจ `/actuator/health` ได้ `UP` และ `/v3/api-docs` มี `/api/v1/players` กับ `/api/v1/players/{id}` แล้ว ยังไม่ได้ยิง Player POST/PUT/DELETE กับฐานข้อมูลพัฒนาเพื่อไม่เพิ่มข้อมูลทดสอบใน volume หลัก
+`TeamApiTests` ผ่าน 9/9, `PlayerApiTests` ผ่าน 7/7 และ `PlayerTeamIntegrationTests` ผ่าน 1/1; เมื่อ 8 ต.ค. รันทั้งโปรเจกต์ **31 tests, 0 failures/errors/skipped** ด้วย `docker compose --profile test run --rm --build tests` หลัง rebuild แอปพัฒนา ตรวจ `/actuator/health` ได้ `UP` และ `/v3/api-docs` มี `/api/v1/players` กับ `/api/v1/players/{id}` แล้ว ยังไม่ได้ยิง Player POST/PUT/DELETE กับฐานข้อมูลพัฒนาเพื่อไม่เพิ่มข้อมูลทดสอบใน volume หลัก
+
+หลังรับ `develop` ล่าสุด วันที่ 9 ต.ค. รันทั้งโปรเจกต์ผ่าน 57 tests แล้ว จากนั้นเริ่ม `TeamServiceImplTest` แบบ Mockito แยกกรณีชื่อทีมซ้ำ: จำลอง `TeamRepository.existsByNameIgnoreCase` ให้ตอบ `true`, ตรวจว่า Service trim ชื่อก่อนถาม Repository, โยน `BusinessException` และไม่เรียก `saveAndFlush` เทสต์เฉพาะกรณีนี้ผ่าน 1/1 ด้วย `mvn -B '-Dtest=TeamServiceImplTest' test`; ยังไม่ได้รันทั้งโปรเจกต์ซ้ำหลังเพิ่มเทสต์นี้
 
 ก่อนส่ง PR ให้ตรวจ: Swagger แสดง endpoint ใหม่จริง, status/error ตรงกฎ, `git diff --check`, tests ผ่านบนโค้ดที่ส่ง, README/คู่มือนี้ตรงพฤติกรรมล่าสุด และแจ้งเจ้าของโมดูลที่ใช้ไฟล์ร่วม `.env` เป็นค่า local ไม่ commit และไม่ใส่รหัสผ่านหรือ token ในเอกสาร/PR

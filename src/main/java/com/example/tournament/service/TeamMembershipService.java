@@ -7,7 +7,7 @@ import com.example.tournament.dto.response.TeamPlayerResponse;
 
 public interface TeamMembershipService {
 
-    Page<TeamPlayerResponse> listPlayers(Long teamId, Pageable pageable);
+    Page<TeamPlayerResponse> listPlayers(Long teamId, String name, String role, Pageable pageable);
 
     TeamPlayerResponse addPlayer(Long teamId, Long playerId);
 

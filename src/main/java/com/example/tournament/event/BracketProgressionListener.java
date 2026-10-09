@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import com.example.tournament.domain.entity.Match;
 import com.example.tournament.domain.entity.Team;
 import com.example.tournament.domain.enums.MatchStatus;
+import com.example.tournament.domain.enums.TournamentStatus;
 import com.example.tournament.exception.BusinessException;
 import com.example.tournament.exception.ResourceNotFoundException;
 import com.example.tournament.repository.MatchRepository;
@@ -26,9 +27,10 @@ public class BracketProgressionListener {
                 .orElseThrow(() -> new ResourceNotFoundException("Match not found: " + event.matchId()));
 
         Match next = match.getNextMatch();
+
         if (next == null) {
             // ไม่มีแมตช์ถัดไป = นัดชิงจบแล้ว รายการจบ
-            match.getTournament().setStatus("COMPLETED");
+            match.getTournament().setStatus(TournamentStatus.COMPLETED);
             return;
         }
 
@@ -39,6 +41,7 @@ public class BracketProgressionListener {
         // match_number เลขคี่ไปช่อง A เลขคู่ไปช่อง B
         boolean goesToSlotA = match.getMatchNumber() % 2 == 1;
         Team occupant = goesToSlotA ? next.getTeamA() : next.getTeamB();
+
         if (occupant != null && !occupant.getId().equals(winner.getId())) {
             throw new BusinessException("Next match slot is already taken");
         }

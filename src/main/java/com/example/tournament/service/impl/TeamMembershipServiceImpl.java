@@ -31,9 +31,23 @@ public class TeamMembershipServiceImpl implements TeamMembershipService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<TeamPlayerResponse> listPlayers(Long teamId, Pageable pageable) {
+    public Page<TeamPlayerResponse> listPlayers(Long teamId, String name, String role, Pageable pageable) {
         findTeam(teamId);
-        return players.findByTeamId(teamId, pageable).map(mapper::toResponse);
+        boolean hasName = name != null && !name.isBlank();
+        boolean hasRole = role != null && !role.isBlank();
+
+        Page<Player> result;
+        if (hasName && hasRole) {
+            result = players.findByTeamIdAndNameContainingIgnoreCaseAndRoleIgnoreCase(
+                    teamId, name.trim(), role.trim(), pageable);
+        } else if (hasName) {
+            result = players.findByTeamIdAndNameContainingIgnoreCase(teamId, name.trim(), pageable);
+        } else if (hasRole) {
+            result = players.findByTeamIdAndRoleIgnoreCase(teamId, role.trim(), pageable);
+        } else {
+            result = players.findByTeamId(teamId, pageable);
+        }
+        return result.map(mapper::toResponse);
     }
 
     @Override

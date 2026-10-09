@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.example.tournament.domain.enums.TournamentFormat;
+import com.example.tournament.domain.enums.TournamentStatus;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -40,8 +41,9 @@ public class Tournament {
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
-    private String status;
+    private TournamentStatus status = TournamentStatus.UPCOMING;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "game_id")
@@ -109,11 +111,11 @@ public class Tournament {
         this.endDate = endDate;
     }
 
-    public String getStatus() {
+    public TournamentStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(TournamentStatus status) {
         this.status = status;
     }
 
@@ -157,7 +159,7 @@ public class Tournament {
         this.tournamentTeams = tournamentTeams;
     }
 
-        public Short getTotalGames() {
+    public Short getTotalGames() {
         return totalGames;
     }
 

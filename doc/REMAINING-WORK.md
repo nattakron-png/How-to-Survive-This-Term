@@ -90,7 +90,7 @@
 
 ---
 
-### คนที่ 3: Tournament + TournamentTeam (ยังไม่มีเจ้าของ)
+### คนที่ 3: Tournament + TournamentTeam (อันวา)
 
 ใช้ `TournamentTeamRepository` จาก PR ของณัฐกร และสร้าง `TournamentRepository`
 

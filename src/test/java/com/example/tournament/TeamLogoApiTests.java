@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.UUID;
@@ -21,6 +23,8 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+
+import javax.imageio.ImageIO;
 
 import com.example.tournament.domain.entity.Team;
 import com.example.tournament.repository.TeamRepository;
@@ -68,9 +72,10 @@ class TeamLogoApiTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.logoUrl").value(logoUrl));
 
+        String updatedName = "Updated-" + UUID.randomUUID();
         mvc.perform(put("/api/v1/teams/{id}", teamId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"Updated team\",\"description\":\"Updated\"}"))
+                .content("{\"name\":\"" + updatedName + "\",\"description\":\"Updated\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.logoUrl").value(logoUrl));
 
@@ -109,6 +114,24 @@ class TeamLogoApiTests {
                     return request;
                 }))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void rejectsImageWithTooManyPixelsBeforeSavingUrl() throws Exception {
+        Long teamId = createTeam();
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        ImageIO.write(new BufferedImage(4097, 1, BufferedImage.TYPE_INT_RGB), "png", output);
+        MockMultipartFile file = new MockMultipartFile("file", "wide.png", "image/png", output.toByteArray());
+
+        mvc.perform(multipart("/api/v1/teams/{id}/logo", teamId)
+                .file(file)
+                .with(request -> {
+                    request.setMethod("PUT");
+                    return request;
+                }))
+                .andExpect(status().isBadRequest());
+
+        assertEquals(null, teams.findById(teamId).orElseThrow().getLogoUrl());
     }
 
     private Long createTeam() {

@@ -33,4 +33,6 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
             String name,
             String role,
             Pageable pageable);
+
+    long countByTeamId(Long teamId);
 }

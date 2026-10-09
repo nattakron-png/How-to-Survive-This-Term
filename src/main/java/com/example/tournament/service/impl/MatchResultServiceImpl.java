@@ -56,22 +56,28 @@ public class MatchResultServiceImpl implements MatchResultService {
             throw new BusinessException("Both teams must be set before recording a result");
         }
 
-        // 4. คะแนนไม่ติดลบ ตรวจแล้วใน DTO ด้วย @Min(0) → 400
+        // 4. Match ต้องอยู่ในสถานะ SCHEDULED ก่อนบันทึกผล
+        if (!MatchStatus.SCHEDULED.name().equals(match.getStatus())) {
+            throw new BusinessException(
+                    "Match must be SCHEDULED before recording a result");
+        }
+
+        // ุ6. คะแนนไม่ติดลบ ตรวจแล้วใน DTO ด้วย @Min(0) → 400
         int scoreA = request.teamAScore();
         int scoreB = request.teamBScore();
 
-        // 5. แพ้คัดออกห้ามเสมอ → 400
+        // 7. แพ้คัดออกห้ามเสมอ → 400
         if (scoreA == scoreB) {
             throw new ValidationException("Single elimination match cannot end in a draw");
         }
 
-        // 6. ผู้ชนะต้องเป็นทีมในแมตช์ → 400
+        // 8. ผู้ชนะต้องเป็นทีมในแมตช์ → 400
         Long winnerId = request.winnerTeamId();
         if (!winnerId.equals(teamA.getId()) && !winnerId.equals(teamB.getId())) {
             throw new ValidationException("Winner must be one of the teams in this match");
         }
 
-        // 7. ผู้ชนะต้องมีคะแนนมากกว่า → 400
+        // 9. ผู้ชนะต้องมีคะแนนมากกว่า → 400
         Team winner = scoreA > scoreB ? teamA : teamB;
         if (!winner.getId().equals(winnerId)) {
             throw new ValidationException("Winner must have the higher score");

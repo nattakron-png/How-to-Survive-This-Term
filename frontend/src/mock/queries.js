@@ -188,3 +188,14 @@ export function getFreeFireStandings(tournamentId) {
 export function getNextFreeFireGame(tournamentId) {
   return getFreeFireGames(tournamentId).find((g) => g.status !== 'COMPLETED') ?? null
 }
+
+export function getRecentFreeFireGames(tournamentId, limit = 3) {
+  return getFreeFireGames(tournamentId)
+    .filter((g) => g.status === 'COMPLETED')
+    .reverse()
+    .slice(0, limit)
+    .map((game) => {
+      const booyah = freeFireGameResults.find((r) => r.gameId === game.id && r.placement === 1)
+      return { ...game, booyahTeam: booyah ? teamById.get(booyah.teamId) : null }
+    })
+}

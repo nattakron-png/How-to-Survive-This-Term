@@ -9,10 +9,12 @@ import TournamentBracket from '@/components/TournamentBracket.vue'
 import MatchRoundList from '@/components/MatchRoundList.vue'
 import TeamDrawer from '@/components/TeamDrawer.vue'
 import FreeFireStandings from '@/components/FreeFireStandings.vue'
+import FreeFireOverview from '@/components/FreeFireOverview.vue'
 import {
   getFreeFireStandings,
   getNextFreeFireGame,
   getPlacementPoints,
+  getRecentFreeFireGames,
   getTournament,
   getTournamentMatches,
 } from '@/mock/queries'
@@ -33,6 +35,7 @@ const tabs = computed(() =>
     ? [
         { key: 'overview', label: 'ภาพรวม' },
         { key: 'standings', label: 'ตารางคะแนน' },
+        { key: 'teams', label: 'ทีมที่เข้าร่วม' },
       ]
     : [
         { key: 'overview', label: 'ภาพรวม' },
@@ -44,6 +47,7 @@ const tabs = computed(() =>
 const standings = computed(() => (isPoints.value ? getFreeFireStandings(props.id) : null))
 const placementPoints = computed(() => (isPoints.value ? getPlacementPoints(props.id) : []))
 const nextGame = computed(() => (isPoints.value ? getNextFreeFireGame(props.id) : null))
+const recentGames = computed(() => (isPoints.value ? getRecentFreeFireGames(props.id) : []))
 
 const pointsSummary = computed(() => {
   if (!isPoints.value) return ''
@@ -149,7 +153,33 @@ watch(() => props.id, () => {
         >{{ tab.label }}</button>
       </div>
 
-      <div v-if="activeTab === 'overview'" class="columns">
+      <FreeFireOverview
+        v-if="activeTab === 'overview' && isPoints"
+        :tournament="tournament"
+        :standings="standings"
+        :recent-games="recentGames"
+        :placement-points="placementPoints"
+        @show-standings="activeTab = 'standings'"
+      />
+
+      <section v-else-if="activeTab === 'teams'" class="section">
+        <div class="section-header">
+          <h2 class="section-title">ทีมที่เข้าร่วม</h2>
+          <span class="section-meta">{{ tournament.teams.length }} ทีม · กดที่ทีมเพื่อดูผู้เล่น</span>
+        </div>
+        <div v-if="tournament.teams.length" class="participants">
+          <ParticipantCard
+            v-for="team in tournament.teams"
+            :key="team.id"
+            :team="team"
+            :selected="team.id === selectedTeamId"
+            @select="selectedTeamId = team.id"
+          />
+        </div>
+        <p v-else class="panel empty">ยังไม่มีทีมเข้าร่วม</p>
+      </section>
+
+      <div v-else-if="activeTab === 'overview'" class="columns">
         <div class="left">
           <section class="section">
             <div class="section-header">
@@ -168,7 +198,7 @@ watch(() => props.id, () => {
             <p v-else class="empty">ยังไม่มีทีมเข้าร่วม</p>
           </section>
 
-          <section v-if="!isPoints" class="section">
+          <section class="section">
             <div class="section-header">
               <h2 class="section-title">ผลการแข่งล่าสุด</h2>
               <button type="button" class="link" @click="activeTab = 'matches'">ดูแมตช์ทั้งหมด →</button>

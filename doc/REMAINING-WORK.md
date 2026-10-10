@@ -85,7 +85,7 @@
 - [ ] **Team API รองรับเกมและโลโก้** เพิ่ม `gameId`, `logoUrl` ใน `TeamRequest`/`TeamResponse` ทีมใหม่ต้องมีเกม (เกมไม่มีอยู่ → 404)
 - [ ] **อัปโหลดโลโก้** interface `FileStorageService` + implementation (เครื่อง local สำหรับพัฒนา, Supabase Storage หรือ Cloudinary สำหรับ Deploy) ใช้กับทีม, รายการแข่ง และเกม
 - [ ] **Unit Test ด้วย Mockito** ของ `TeamServiceImpl` (ตอนนี้มีแต่ Integration Test)
-- [ ] **Deploy** ขึ้น Cloud จริงผ่าน URL สาธารณะ (Render, Railway หรืออื่น ๆ) ใช้ PostgreSQL บน Cloud ตามใบงานข้อ 11 ตกลงกับทีมก่อนว่าใครรับ ถ้าวัชรพลถือ Docker อยู่แล้วก็เหมาะที่สุด
+- [ ] **Deploy รุ่นพร้อมใช้งาน** บน Railway: backend V10 และ PostgreSQL มี URL/health แล้ว แต่ frontend กับ V11 ยังอยู่ใน working tree; ดูขั้นตอนและงานค้างก่อนเปิดบริการใน `doc/deployment-prep.md`
 - [ ] **เอกสาร:** Use Case Diagram และ `doc/use-case-description.md` (ตอนนี้ไฟล์ยังว่าง)
 
 ---

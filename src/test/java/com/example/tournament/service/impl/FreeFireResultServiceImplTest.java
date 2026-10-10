@@ -43,12 +43,18 @@ import com.example.tournament.service.freefire.PointsCalculator;
 @ExtendWith(MockitoExtension.class)
 class FreeFireResultServiceImplTest {
 
-    @Mock FreeFireGameRepository games;
-    @Mock FreeFireGameResultRepository results;
-    @Mock TournamentRepository tournaments;
-    @Mock TournamentTeamRepository tournamentTeams;
-    @Mock TournamentPlacementPointRepository placementPoints;
-    @Mock ApplicationEventPublisher events;
+    @Mock
+    FreeFireGameRepository games;
+    @Mock
+    FreeFireGameResultRepository results;
+    @Mock
+    TournamentRepository tournaments;
+    @Mock
+    TournamentTeamRepository tournamentTeams;
+    @Mock
+    TournamentPlacementPointRepository placementPoints;
+    @Mock
+    ApplicationEventPublisher events;
 
     FreeFireResultServiceImpl service;
     Tournament tournament;
@@ -166,7 +172,7 @@ class FreeFireResultServiceImplTest {
         FreeFireGameResultsResponse response = service.record(5L, validRequest());
 
         assertEquals(3, response.results().size());
-        assertEquals(10L, response.results().get(0).teamId());     // เรียงตามอันดับ
+        assertEquals(10L, response.results().get(0).teamId()); // เรียงตามอันดับ
         assertEquals(12 + 5, response.results().get(0).totalPoints());
         assertEquals(9 + 3, response.results().get(1).totalPoints());
         assertEquals("COMPLETED", game.getStatus());
@@ -228,8 +234,13 @@ class FreeFireResultServiceImplTest {
         Team team = new Team();
         team.setId(teamId);
         team.setName(name);
+
         TournamentTeam tournamentTeam = new TournamentTeam();
         tournamentTeam.setTeam(team);
+
+        // กำหนดชื่อทีม ณ เวลาที่เข้าร่วมการแข่งขัน
+        tournamentTeam.setTeamNameSnapshot(name);
+
         return tournamentTeam;
     }
 

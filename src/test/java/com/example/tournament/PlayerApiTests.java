@@ -21,6 +21,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.example.tournament.repository.PlayerRepository;
+import com.example.tournament.repository.GameRepository;
 import com.example.tournament.repository.TeamRepository;
 
 @SpringBootTest
@@ -35,6 +36,9 @@ class PlayerApiTests {
 
     @Autowired
     private TeamRepository teams;
+
+    @Autowired
+    private GameRepository games;
 
     @Test
     void getPlayerReturnsSavedValuesAndSearchFindsNameIgnoringCase() throws Exception {
@@ -172,7 +176,8 @@ class PlayerApiTests {
     private Long createTeam() throws Exception {
         String name = uniqueName();
         mvc.perform(post("/api/v1/teams").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"" + name + "\",\"description\":\"\"}"))
+                .content("{\"name\":\"" + name + "\",\"description\":\"\",\"gameId\":"
+                        + games.findAll().getFirst().getId() + "}"))
                 .andExpect(status().isCreated());
         return teams.findByNameContainingIgnoreCase(name, Pageable.unpaged())
                 .getContent().getFirst().getId();

@@ -30,6 +30,9 @@ services:
       DB_NAME: ${DB_NAME:-tournament}
       DB_USERNAME: ${DB_USERNAME:-tournament}
       DB_PASSWORD: ${DB_PASSWORD:-tournament_local}
+      LOGO_STORAGE_DIR: /app/uploads/logos
+    volumes:
+      - logo_data:/app/uploads/logos
     depends_on:
       db:
         condition: service_healthy
@@ -73,3 +76,4 @@ services:
 
 volumes:
   postgres_data:
+  logo_data:

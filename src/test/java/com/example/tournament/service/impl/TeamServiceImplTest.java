@@ -1,8 +1,6 @@
 package com.example.tournament.service.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -19,12 +17,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.example.tournament.domain.entity.Team;
-import com.example.tournament.domain.entity.Player;
+import com.example.tournament.domain.entity.Game;
 import com.example.tournament.dto.request.TeamRequest;
 import com.example.tournament.exception.BusinessException;
 import com.example.tournament.exception.ResourceNotFoundException;
+import com.example.tournament.exception.ValidationException;
 import com.example.tournament.mapper.TeamMapper;
-import com.example.tournament.repository.PlayerRepository;
+import com.example.tournament.repository.GameRepository;
 import com.example.tournament.repository.TeamRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,7 +33,7 @@ class TeamServiceImplTest {
     private TeamRepository teams;
 
     @Mock
-    private PlayerRepository players;
+    private GameRepository games;
 
     @Mock
     private TeamMapper mapper;
@@ -47,12 +46,12 @@ class TeamServiceImplTest {
         when(teams.existsByNameIgnoreCase("Phoenix")).thenReturn(true);
 
         BusinessException error = assertThrows(BusinessException.class,
-                () -> service.create(new TeamRequest("  Phoenix  ", "Description")));
+                () -> service.create(new TeamRequest("  Phoenix  ", "Description", 1L)));
 
         assertEquals("Team name already exists", error.getMessage());
         verify(teams).existsByNameIgnoreCase("Phoenix");
         verify(teams, never()).saveAndFlush(any(Team.class));
-        verifyNoInteractions(players, mapper);
+        verifyNoInteractions(mapper);
     }
 
     @Test
@@ -62,64 +61,53 @@ class TeamServiceImplTest {
         when(teams.existsByNameIgnoreCaseAndIdNot("Phoenix", 1L)).thenReturn(true);
 
         BusinessException error = assertThrows(BusinessException.class,
-                () -> service.update(1L, new TeamRequest(" Phoenix ", "Changed")));
+                () -> service.update(1L, new TeamRequest(" Phoenix ", "Changed", null)));
 
         assertEquals("Team name already exists", error.getMessage());
         assertEquals("Original", team.getName());
         verify(teams, never()).saveAndFlush(any(Team.class));
-        verifyNoInteractions(players, mapper);
-    }
-
-    @Test
-    void addPlayerMovesExistingPlayerToRequestedTeam() {
-        Team oldTeam = team(1L);
-        Team newTeam = team(2L);
-        Player player = new Player();
-        player.setId(10L);
-        player.setTeam(oldTeam);
-        when(teams.findById(2L)).thenReturn(Optional.of(newTeam));
-        when(players.findById(10L)).thenReturn(Optional.of(player));
-        when(players.save(player)).thenAnswer(invocation -> invocation.getArgument(0));
-
-        service.addPlayer(2L, 10L);
-
-        assertSame(newTeam, player.getTeam());
-        verify(players).save(player);
-        verify(mapper).toPlayerResponse(player);
-    }
-
-    @Test
-    void removePlayerClearsTeamWhenPlayerBelongsToIt() {
-        Team team = team(2L);
-        Player player = new Player();
-        player.setId(10L);
-        player.setTeam(team);
-        when(teams.findById(2L)).thenReturn(Optional.of(team));
-        when(players.findById(10L)).thenReturn(Optional.of(player));
-
-        service.removePlayer(2L, 10L);
-
-        assertNull(player.getTeam());
-        verify(players).save(player);
         verifyNoInteractions(mapper);
     }
 
     @Test
-    void removePlayerRejectsDifferentTeamWithoutSaving() {
-        Team requestedTeam = team(2L);
-        Team actualTeam = team(3L);
-        Player player = new Player();
-        player.setId(10L);
-        player.setTeam(actualTeam);
-        when(teams.findById(2L)).thenReturn(Optional.of(requestedTeam));
-        when(players.findById(10L)).thenReturn(Optional.of(player));
+    void createRejectsMissingGameBeforeSaving() {
+        ValidationException error = assertThrows(ValidationException.class,
+                () -> service.create(new TeamRequest("Phoenix", "Description", null)));
+
+        assertEquals("Game is required for a new team", error.getMessage());
+        verifyNoInteractions(teams, games, mapper);
+    }
+
+    @Test
+    void createRejectsUnknownGameBeforeSaving() {
+        when(games.findById(99L)).thenReturn(Optional.empty());
 
         ResourceNotFoundException error = assertThrows(ResourceNotFoundException.class,
-                () -> service.removePlayer(2L, 10L));
+                () -> service.create(new TeamRequest("Phoenix", "Description", 99L)));
 
-        assertEquals("Player is not in this team: 10", error.getMessage());
-        assertSame(actualTeam, player.getTeam());
-        verify(players, never()).save(any(Player.class));
+        assertEquals("Game not found: 99", error.getMessage());
+        verify(teams, never()).saveAndFlush(any(Team.class));
+        verifyNoInteractions(mapper);
+    }
+
+    @Test
+    void updateRejectsChangingGameBeforeSaving() {
+        Team team = team(1L);
+        Game originalGame = new Game();
+        originalGame.setId(1L);
+        team.setGame(originalGame);
+        Game otherGame = new Game();
+        otherGame.setId(2L);
+        when(teams.findById(1L)).thenReturn(Optional.of(team));
+        when(games.findById(2L)).thenReturn(Optional.of(otherGame));
+
+        BusinessException error = assertThrows(BusinessException.class,
+                () -> service.update(1L, new TeamRequest("Changed", "Description", 2L)));
+
+        assertEquals("Team game cannot be changed; create a new team for another game", error.getMessage());
+        assertEquals("Original", team.getName());
+        assertEquals(1L, team.getGame().getId());
+        verify(teams, never()).saveAndFlush(any(Team.class));
         verifyNoInteractions(mapper);
     }
 

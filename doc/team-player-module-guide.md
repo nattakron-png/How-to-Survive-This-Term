@@ -8,13 +8,14 @@
 
 | ส่วน | สถานะปัจจุบัน | ไฟล์หลัก |
 | --- | --- | --- |
-| Team CRUD + จัดสมาชิก | ทำแล้ว: ชื่อ/คำอธิบายทีม, แบ่งหน้า, เพิ่ม ย้าย ถอดผู้เล่น | `TeamController`, `TeamServiceImpl`, `TeamMapper`, `TeamApiTests` |
+| Team CRUD | ทำแล้ว: ชื่อ/คำอธิบาย/เกมของทีม, แบ่งหน้า, สร้าง/แก้/ลบ | `TeamController`, `TeamServiceImpl`, `TeamMapper`, `TeamApiTests` |
+| จัดสมาชิกทีม | ทำแล้ว: ดูสมาชิกพร้อมกรองชื่อ/role, เพิ่ม/ย้าย/ถอดผู้เล่น โดยคง URL เดิม | `TeamMembershipController`, `TeamMembershipServiceImpl`, `TeamMembershipMapper`, `TeamApiTests` |
 | Docker + PostgreSQL + Flyway | ทำแล้ว: build Java 21, รัน PostgreSQL 17, ฐานข้อมูลทดสอบแยก | `Dockerfile`, `compose.yaml`, `application.properties` |
 | Swagger/OpenAPI | ทำแล้ว: เปิด Swagger UI และ JSON spec ได้ | `pom.xml`, `README.md` |
 | Player CRUD | ทำแล้ว: รายการ/ค้นชื่อ, ดูตาม id, สร้าง, แก้, ลบ และกำหนดทีมแบบไม่บังคับ | `PlayerController`, `PlayerServiceImpl`, `PlayerApiTests` |
-| Team API รองรับเกมและโลโก้ | ยังไม่ทำใน API; V9 และ `Team` Entity มี `game_id`/`logo_url` แล้ว | `V9__add_games_and_tournament_format.sql`, `TeamRequest`, `TeamResponse` |
-| Upload โลโก้ + Deploy | ยังไม่ทำ; ต้องตกลงที่เก็บไฟล์และเป้าหมาย deploy กับทีม | งานต่อใน `REMAINING-WORK.md` |
-| Unit test Service + Use Case | เริ่ม Mockito unit test ของ `TeamServiceImpl` แล้ว 1 กรณี (สร้างทีมชื่อซ้ำ); Use Case ยังไม่ทำ | `TeamServiceImplTest`, `use-case-description.md` |
+| Team API รองรับเกมและโลโก้ | สร้างทีมใหม่ต้องมี `gameId`; สร้าง/แก้/อ่านทีมส่งค่าเกมกลับ พร้อมอัปโหลดและแสดง `logoUrl` | `TeamLogoController`, `TeamRequest`, `TeamResponse`, `TeamMapper`, `TeamServiceImpl` |
+| Upload โลโก้ + Deploy | โลโก้ทีมเก็บใน local volume สำหรับพัฒนาแล้ว; Game/Tournament และ cloud storage ยังต้องตกลงกับทีม | `FileStorageService`, `LocalFileStorageService`, `compose.yaml` |
+| Unit test Service + Use Case | Mockito ของ Team CRUD/เกม 5 กรณี, สมาชิกทีม 3 กรณี, Player CRUD 4 กรณี; Use Case ยังไม่ทำ | `TeamServiceImplTest`, `TeamMembershipServiceImplTest`, `PlayerServiceImplTest`, `use-case-description.md` |
 
 งาน Game API/Auth, Tournament, สายการแข่งขัน และผล Free Fire มีเจ้าของโมดูลอื่นตาม `REMAINING-WORK.md` ให้ประสานก่อนแก้ไฟล์หรือกฎร่วม
 
@@ -29,19 +30,29 @@ Base path `/api/v1/teams`:
 | GET | `/api/v1/teams?name=phoenix&page=0&size=20&sort=name,asc` | ค้นหาชื่อบางส่วนและแบ่งหน้า | 200 |
 | GET | `/api/v1/teams/{id}` | ดูทีมเดียว | 200 |
 | POST | `/api/v1/teams` | สร้างทีม | 201 พร้อม `Location` |
-| PUT | `/api/v1/teams/{id}` | แก้ชื่อ/คำอธิบาย | 200 |
+| PUT | `/api/v1/teams/{id}` | แก้ชื่อ/คำอธิบาย; กำหนดเกมครั้งแรกให้ทีมเก่าที่เกมว่างได้ แต่เปลี่ยนเกมที่กำหนดแล้วไม่ได้ | 200 |
 | DELETE | `/api/v1/teams/{id}` | ลบทีม | 204 |
-| GET | `/api/v1/teams/{id}/players?page=0&size=20` | ดูสมาชิกทีม | 200 |
+| GET | `/api/v1/teams/{id}/players?name=alice&role=Captain&page=0&size=20` | ดูสมาชิกทีม; `name` และ `role` ไม่บังคับ กรองร่วมกันได้ | 200 |
 | PUT | `/api/v1/teams/{id}/players/{playerId}` | เพิ่มหรือย้ายผู้เล่นที่มีอยู่เข้าทีม | 200 |
 | DELETE | `/api/v1/teams/{id}/players/{playerId}` | ถอดผู้เล่นออกจากทีม โดยไม่ลบผู้เล่น | 204 |
+| PUT | `/api/v1/teams/{id}/logo` | อัปโหลดโลโก้ทีมแบบ `multipart/form-data` ส่วน `file` | 200 พร้อม `logoUrl` |
+| GET | `/api/v1/logos/{filename}` | อ่านรูปจาก `logoUrl` ของทีม | 200 พร้อมภาพ |
 
-Request สำหรับสร้าง/แก้ทีมตอนนี้:
+Request สำหรับสร้างทีมตอนนี้:
 
 ```json
-{ "name": "Team Phoenix", "description": "ทีมจากคณะวิศวกรรมศาสตร์" }
+{ "name": "Team Phoenix", "description": "ทีมจากคณะวิศวกรรมศาสตร์", "gameId": 1 }
 ```
 
-`name` ต้องไม่เป็นช่องว่างและยาวไม่เกิน 150 ตัวอักษร Service ตัดช่องว่างหัวท้ายและปฏิเสธชื่อทีมซ้ำแบบไม่สนตัวพิมพ์ใหญ่เล็ก `description` เว้นว่างได้ PUT แทนค่าทั้งชุด จึงส่ง `description` มาด้วยหากต้องการเก็บค่าเดิม ทีมสร้างได้โดยยังไม่มีผู้เล่น ชื่อทีมเหมือนชื่อผู้เล่นได้เพราะเป็นคนละตาราง
+`name` ต้องไม่เป็นช่องว่างและยาวไม่เกิน 150 ตัวอักษร Service ตัดช่องว่างหัวท้ายและปฏิเสธชื่อทีมซ้ำแบบไม่สนตัวพิมพ์ใหญ่เล็ก `description` เว้นว่างได้ ทีมใหม่ต้องส่ง `gameId` ที่มีอยู่ในตาราง `games` (ไม่ส่ง → 400, id ไม่มี → 404); ตัวเลข 1 ในตัวอย่างเป็นเพียงตัวอย่าง ให้ใช้ id ที่มีอยู่จริงในฐานข้อมูลนั้น ทีมสร้างได้โดยยังไม่มีผู้เล่น ชื่อทีมเหมือนชื่อผู้เล่นได้เพราะเป็นคนละตาราง
+
+`TeamResponse` จาก POST/GET/list/PUT ส่ง `gameId` พร้อม `logoUrl` ด้วย PUT ที่ไม่ส่ง `gameId` จะคงเกมเดิมไว้ รวมถึงทีมเก่าที่ `game_id` เป็น NULL; ทีมเก่าที่เกมว่างกำหนดเกมครั้งแรกได้ แต่ทีมที่มีเกมแล้วส่ง id เกมอื่นจะตอบ 409 โดยไม่แก้ข้อมูลทีม ต้องสร้างทีมใหม่สำหรับอีกเกม แม้ใช้ชุดผู้เล่นเดิม หากส่ง id เกมที่ไม่มีจริงตอบ 404 ส่วน `description` ยังแทนค่าตาม request จึงต้องส่งซ้ำหากต้องการเก็บค่าเดิม
+
+การใช้ผู้เล่นคนเดิมในทีมใหม่คนละเกมยังมีข้อจำกัด: `players.team_id` ให้ผู้เล่น 1 record อยู่ได้เพียงทีมเดียวในขณะหนึ่ง การย้าย record เดิมไปทีมใหม่จะทำให้สมาชิกทีมเดิมหายจากมุมมองปัจจุบัน และยังไม่มี snapshot รายชื่อแยกตามทัวร์ ต้องออกแบบความสัมพันธ์สมาชิก/ประวัติกับเจ้าของ DB และ Tournament ก่อนรองรับผู้เล่นชุดเดิมในหลายทีมพร้อมกัน ไม่ควรสร้าง player id ซ้ำเพื่อเลี่ยงข้อจำกัดนี้
+
+อัปโหลดโลโก้หลังสร้างทีมด้วย `PUT /api/v1/teams/{id}/logo` ส่ง `multipart/form-data` ชื่อส่วน `file` (PNG หรือ JPEG, ไม่เกิน 2 MB และ 4096 × 4096 พิกเซล) เช่น `curl -X PUT -F "file=@logo.png" http://localhost:8080/api/v1/teams/1/logo` ผลตอบมี `logoUrl` เป็น path `/api/v1/logos/{filename}` ให้เว็บนำไปแสดงด้วย GET; `GET /api/v1/teams/{id}` และ list ก็ส่ง URL นี้ด้วย ไฟล์ผิดรูปแบบตอบ 400, ทีมไม่พบตอบ 404 ไฟล์เก่าหลังเปลี่ยนโลโก้ยังอยู่ใน storage เพื่อไม่ทำลาย URL ที่อาจถูกอ้างอิง ต้องกำหนดนโยบาย cleanup ภายหลัง
+
+Docker Compose เก็บรูปใน named volume `logo_data` ที่ `/app/uploads/logos` แยกจาก volume ฐานข้อมูล จึงยังอยู่หลัง `docker compose down` และแอป user `app` เขียนได้ หากรันจาก IDE ใช้ `uploads/logos` ใน repo ซึ่งถูก `.gitignore`; เปลี่ยนได้ผ่าน `LOGO_STORAGE_DIR` ค่า path นี้เป็นของเครื่องที่รัน ไม่ใช่ค่าที่สมาชิกทุกคนต้องใช้ร่วมกัน ฝั่ง deploy ยังต้องเลือกที่เก็บถาวรและเพิ่ม implementation ของ `FileStorageService`; URL ปัจจุบันเป็น path ภายในแอปและยังไม่มีการจำกัดสิทธิ์ upload เพราะระบบ Auth ยังไม่เสร็จ
 
 กฎชื่อทีมไม่ซ้ำนี้ตรงกับ Service และคอลัมน์ `teams.name UNIQUE` ใน schema ปัจจุบัน; ยังไม่มีหลักฐานในเอกสาร Figma ว่ากำหนดกฎชื่อซ้ำละเอียดถึงตัวพิมพ์ใหญ่เล็ก ฐานข้อมูลกันชื่อที่เหมือนกันเป๊ะ ส่วนการกันต่างตัวพิมพ์เป็นการตรวจใน Service ก่อนบันทึก จึงยังไม่ได้พิสูจน์กรณีมีคำขอสร้างชื่อที่ต่างตัวพิมพ์เข้ามาพร้อมกัน
 
@@ -59,9 +70,9 @@ Base path `/api/v1/players`:
 
 ตัวอย่าง request: `{ "name": "Alice", "role": "Captain", "description": "", "teamId": null }` ต้องมี `name` ไม่ว่าง/ไม่เกิน 150 ตัวอักษร และ `role` ไม่ว่าง/ไม่เกิน 100 ตัวอักษร ระบบตัดช่องว่างหัวท้ายสองฟิลด์นี้ `teamId` เว้นว่างได้ ถ้าระบุ id ทีมที่ไม่มีจริงตอบ 404 ส่วน PUT แทนค่าทั้งชุด: ไม่ส่ง `teamId` หรือส่ง `null` จะถอดผู้เล่นออกจากทีม ผู้จัดยังใช้ Team API เพิ่ม/ย้าย/ถอดผู้เล่นได้ และทั้งสอง API อ่านความสัมพันธ์เดียวกัน
 
-### API ที่ต้องทำต่อ
+### API และกฎที่ต้องทำต่อ
 
-Team API ยังไม่รับ `gameId`/`logoUrl`; งาน Auth, อัปโหลดโลโก้ และกฎเพิ่มเติมของทีมในรายการแข่งยังต้องประสานเจ้าของโมดูล
+Team API รับ/ตอบ `gameId` แล้ว; `logoUrl` แสดงใน TeamResponse และตั้งผ่าน upload endpoint เท่านั้น เพื่อไม่ให้ PUT ข้อมูลทีมลบ URL เดิมโดยไม่ตั้งใจ งาน Auth, ที่เก็บไฟล์สำหรับ deploy และกฎเปลี่ยนเกม/สมาชิกของทีมในรายการแข่งยังต้องประสานเจ้าของโมดูล
 
 **แนวทางตัวตนซ้ำสำหรับ Player CRUD:** ไม่บังคับรหัสนักศึกษา เพราะจำกัดการรับผู้เล่นที่ไม่มีรหัสหรือมาจากสถาบันอื่น ตาราง `players` ปัจจุบันมีชื่อ/ตำแหน่ง/คำอธิบาย แต่ไม่มีคีย์ระบุคนจริง GET รายการใช้ค้นชื่อบางส่วนแบบไม่สนตัวพิมพ์เพื่อให้ผู้จัดเห็นรายการที่อาจซ้ำ แต่ **ยังไม่มีการ normalize ช่องว่างภายในชื่อหรือแจ้งเตือนความคล้ายโดยอัตโนมัติ** ไม่ใช้ชื่อเป็น `UNIQUE` หรือปฏิเสธการสร้างอัตโนมัติ เพราะคนละคนอาจชื่อเหมือนกันและคนเดียวกันอาจกรอกชื่อหลายแบบ การเรียงตัวอักษรในชื่อก่อนเทียบก็ไม่ใช่หลักฐานตัวตน วิธีค้นชื่อยังรับประกันว่า 1 คนมีเพียง 1 id ไม่ได้ หากภายหลังต้องการรับประกัน ต้องตกลงตัวระบุที่ยืดหยุ่นและได้รับอนุญาตให้เก็บกับทีมก่อน แล้วให้ผู้ดูแล DB เพิ่ม migration เวอร์ชันใหม่ ไม่แก้ V2 ย้อนหลัง
 
@@ -108,22 +119,24 @@ HTTP/Swagger → Controller + @Valid Request DTO
 
 ตัวอย่าง `POST /api/v1/teams`: `TeamController.create` รับ `TeamRequest`, `TeamServiceImpl.create` trim ชื่อและตรวจซ้ำ, `TeamRepository.saveAndFlush` บันทึก, `TeamMapper.toResponse` เลือกฟิลด์ตอบ, Controller ตอบ 201 และ `Location` `GlobalExceptionHandler` รับ exception จาก validation/service/ฐานข้อมูลและแปลงเป็น 400/404/409
 
+**ขอบเขตคลาสหลังแยกหน้าที่:** `TeamController` → `TeamService`/`TeamServiceImpl` → `TeamRepository`/`TeamMapper` ดูแลข้อมูลทีม; `TeamMembershipController` → `TeamMembershipService`/`TeamMembershipServiceImpl` → `PlayerRepository`/`TeamMembershipMapper` ดูแลความสัมพันธ์สมาชิก; `PlayerController` → `PlayerService`/`PlayerServiceImpl` → `PlayerRepository`/`PlayerMapper` ดูแลข้อมูลผู้เล่นและ `teamId` ปัจจุบัน Controller ไม่เรียก Repository ตรง ส่วน endpoint `/api/v1/teams/{id}/players` ทั้งสาม method ยังใช้ URL และ response เดิมเพื่อไม่กระทบผู้เรียก
+
 `teams.id` และ `players.id` สร้างโดยฐานข้อมูล ผู้เรียกไม่ต้องกำหนดเอง `players.name`/`role` บังคับ แต่ `team_id` เว้นว่างได้ `PUT /teams/{id}/players/{playerId}` ตั้ง `player.team` เพื่อเพิ่มหรือย้ายทีม; DELETE ความสัมพันธ์ตั้ง `player.team = null` โดยเก็บผู้เล่นไว้ หากลบทีม migration V4 ตั้ง `players.team_id` เป็น NULL ด้วย ผู้เล่น **หนึ่ง id** มี `team_id` ได้ค่าเดียว จึงไม่ปรากฏพร้อมกันในสองทีมจากความสัมพันธ์นี้ แต่คนจริงคนเดียวอาจถูกบันทึกเป็นผู้เล่นสองแถวคนละ id ได้จนกว่าจะกำหนดวิธีตรวจตัวตนตามหัวข้อด้านบน
 
-`TeamResponse` ปัจจุบันตอบเพียง `id`, `name`, `description`, `createdAt`; Entity มี `game`/`logoUrl` แล้วแต่ API ยังไม่ใช้ ส่วน `tournament_teams` (V6) และ `matches` (V7) อ้างทีม ไม่ได้อ้างผู้เล่นโดยตรง เกม Fighting Game มี `min_players = 1` ใน V9 หากใช้ schema เดิม ผู้จัดอาจสร้างทีมสมาชิก 1 คนแล้วเลือกเข้ารายการ; ถ้าต้องการให้คู่แข่งเป็นผู้เล่นเดี่ยวโดยตรง ต้องตกลงกับทีมก่อนเปลี่ยน schema/หน้าแสดงผล
+`TeamResponse` ตอบ `id`, `name`, `description`, `logoUrl`, `createdAt`; `logoUrl` เป็น `null` ก่อนอัปโหลด ส่วน `game` ใน Entity ยังไม่อยู่ใน Team API `tournament_teams` (V6) และ `matches` (V7) อ้างทีม ไม่ได้อ้างผู้เล่นโดยตรง เกม Fighting Game มี `min_players = 1` ใน V9 หากใช้ schema เดิม ผู้จัดอาจสร้างทีมสมาชิก 1 คนแล้วเลือกเข้ารายการ; ถ้าต้องการให้คู่แข่งเป็นผู้เล่นเดี่ยวโดยตรง ต้องตกลงกับทีมก่อนเปลี่ยน schema/หน้าแสดงผล
 
 ## 4. ต้องตกลงกับเพื่อนก่อนเชื่อมระบบ
 
 | เรื่อง | คุยกับใคร | ผลต่อโมดูลนี้ |
 | --- | --- | --- |
-| `Game` และ `gameId` ในทีม | คนทำ Game API/ฐานข้อมูล และ Tournament | ทีมใหม่ต้องเลือกเกมอย่างไร, เกมไม่มีจริง → 404, ทีมเก่าที่ `game_id` ยัง NULL, ห้ามทีมเข้า Tournament เกมไม่ตรง |
+| `Game` และ `gameId` ในทีม | คนทำ Game API/ฐานข้อมูล และ Tournament | Team API ล็อกเกมหลังตั้งค่าแล้ว; ต้องตกลงวิธีให้ผู้เล่นชุดเดิมอยู่ในทีมใหม่คนละเกมและเก็บประวัติ roster โดยไม่สร้าง player id ซ้ำ |
 | การแก้สมาชิกหลังผู้จัดเพิ่มทีมเข้ารายการ | คนทำ Tournament/สายการแข่งขัน | `addPlayer/removePlayer` ตอนนี้ไม่เช็กสถานะรายการหรือจำนวนสมาชิกขั้นต่ำ ต้องตกลงช่วงเวลาที่ล็อก roster |
 | การลบทีม | คนทำ Tournament/Match | V6 ลบความสัมพันธ์ทีมในรายการแบบ cascade แต่ match มี FK แบบ restrict ต้องกำหนดนโยบายก่อนให้ลบทีมที่เคยแข่ง |
-| Upload โลโก้ | คนทำ Game/Tournament และ frontend | ตกลงที่เก็บไฟล์, ชนิด/ขนาด, URL และสิทธิ์ร่วมกันก่อนทำ `FileStorageService` |
+| Upload โลโก้ | คนทำ Game/Tournament และ frontend | Team API ใช้ local storage แล้ว; ตกลงการใช้ร่วมกัน, cloud storage และสิทธิ์ก่อนต่อ Game/Tournament |
 | Auth/Admin | คนทำ Auth | หลังเปิด Security ต้องให้ Swagger, OpenAPI, health ใช้ได้ตามกฎทีม และปรับ tests ที่เรียก API เขียนข้อมูล |
 | ย้ายโครงโปรเจกต์/Deploy | คนทำ DB/CI และทีม | หากย้าย source ไป `code/` ต้องแก้ Dockerfile/Compose/CI/setup พร้อมกัน; ตกลง cloud และ DB ก่อน deploy |
 
-**ช่องว่างที่เห็นจากโค้ดตอนนี้:** `TeamServiceImpl.create` ยังไม่ตั้ง `game` ทำให้ทีมที่สร้างผ่าน API มี `game_id = NULL`; การลบทีมเรียก Repository ตรงโดยยังไม่มีกฎตามประวัติแข่ง ส่วน roster, Auth, upload และ deploy เป็นเรื่องที่ต้องตรวจเมื่อโมดูลเหล่านั้นพร้อม อย่าอ้างว่าเกิด bug จริงแล้วหากยังไม่ได้ลองร่วมกัน
+**ช่องว่างที่เห็นจากโค้ดตอนนี้:** ทีมที่สร้างผ่าน API ใหม่มี `game_id` และเปลี่ยนเกมเดิมไม่ได้แล้ว แต่ `players.team_id` ยังรองรับสมาชิกปัจจุบันเพียงทีมเดียว; การลบทีมเรียก Repository ตรงโดยยังไม่มีกฎตามประวัติแข่ง ส่วน roster, Auth, upload ของ Game/Tournament และ deploy เป็นเรื่องที่ต้องตรวจเมื่อโมดูลเหล่านั้นพร้อม อย่าอ้างว่าเกิด bug จริงแล้วหากยังไม่ได้ลองร่วมกัน
 
 ### ความยืดหยุ่นเมื่อเพิ่มเกม กติกา และรูปแบบตารางแข่ง
 
@@ -139,8 +152,8 @@ HTTP/Swagger → Controller + @Valid Request DTO
 
 ## 5. ลำดับลงมือทำของคนที่ 2
 
-1. **ต่อ Team API กับเกมและโลโก้:** เพิ่ม `gameId`/`logoUrl` ใน Request/Response/Mapper/Service ตรวจ id เกมที่ไม่มีจริง → 404 และรักษาข้อมูลทีมเก่าที่เกมยังว่างตามข้อตกลงกับทีม
-2. **เพิ่ม unit tests ของ TeamServiceImpl:** ทดสอบกฎชื่อซ้ำ, เกมไม่มีจริง, ย้าย/ถอดผู้เล่น และกรณี conflict ที่ตกลงกับทีม โดยไม่แทน integration tests เดิม
+1. **Team API กับเกมทำแล้ว:** เพิ่ม `gameId` ใน Request/Response/Mapper/Service ตรวจเกมไม่มีจริง → 404, สร้างใหม่ขาดเกม → 400, รักษาข้อมูลทีมเก่าที่เกมยังว่าง และปฏิเสธการเปลี่ยนเกมที่กำหนดแล้ว → 409; งานต่อคือรูปแบบสมาชิกหลายทีม/ประวัติ roster ข้ามเกม
+2. **Unit tests ตามหน้าที่ทำแล้ว:** `TeamServiceImplTest` ตรวจชื่อซ้ำ/เกมขาด/เกมไม่มีจริง; `TeamMembershipServiceImplTest` ตรวจการเพิ่ม ย้าย ถอดสมาชิก; `PlayerServiceImplTest` ตรวจ Player CRUD โดยคง integration tests เดิม
 3. **Upload/Deploy/Use Case:** ลงมือหลังตกลงขอบเขตกับเจ้าของ Game/Tournament/frontend; ทำ Use Case Diagram และ `use-case-description.md` จากพฤติกรรม API ที่เสร็จจริง
 4. **ตรวจคนซ้ำให้ละเอียดขึ้นถ้าทีมยืนยัน:** ปัจจุบันมีเพียงค้นชื่อบางส่วน; แนวทาง normalize ชื่อ/แจ้งเตือนและข้อมูลประกอบตัวตนยังไม่ทำ
 
@@ -169,6 +182,18 @@ docker compose --profile test stop test-db
 
 `TeamApiTests` ผ่าน 9/9, `PlayerApiTests` ผ่าน 7/7 และ `PlayerTeamIntegrationTests` ผ่าน 1/1; เมื่อ 8 ต.ค. รันทั้งโปรเจกต์ **31 tests, 0 failures/errors/skipped** ด้วย `docker compose --profile test run --rm --build tests` หลัง rebuild แอปพัฒนา ตรวจ `/actuator/health` ได้ `UP` และ `/v3/api-docs` มี `/api/v1/players` กับ `/api/v1/players/{id}` แล้ว ยังไม่ได้ยิง Player POST/PUT/DELETE กับฐานข้อมูลพัฒนาเพื่อไม่เพิ่มข้อมูลทดสอบใน volume หลัก
 
-หลังรับ `develop` ล่าสุด วันที่ 9 ต.ค. รันทั้งโปรเจกต์ผ่าน 57 tests แล้ว จากนั้นเริ่ม `TeamServiceImplTest` แบบ Mockito แยกกรณีชื่อทีมซ้ำ: จำลอง `TeamRepository.existsByNameIgnoreCase` ให้ตอบ `true`, ตรวจว่า Service trim ชื่อก่อนถาม Repository, โยน `BusinessException` และไม่เรียก `saveAndFlush` เทสต์เฉพาะกรณีนี้ผ่าน 1/1 ด้วย `mvn -B '-Dtest=TeamServiceImplTest' test`; ยังไม่ได้รันทั้งโปรเจกต์ซ้ำหลังเพิ่มเทสต์นี้
+หลังแยก Team CRUD ออกจากการจัดสมาชิก วันที่ 9 ต.ค. 2026 รัน Mockito ของ `TeamServiceImplTest`, `TeamMembershipServiceImplTest` และ `PlayerServiceImplTest` ผ่าน 9/9 ด้วย Maven/JDK 26 ในเครื่อง จากนั้นรัน `docker compose --profile test run --rm --build tests` กับ PostgreSQL test-db บน Java 21 ผ่านทั้งโปรเจกต์ 66 tests, 0 failures/errors/skipped แล้วหยุด test-db; URL และผลตอบกลับของ Team/Player API ยังผ่าน integration tests เดิม ไม่ได้เพิ่มกฎสมาชิกประจำทัวร์หรือแก้โมดูล Tournament
+
+หลังรับ `origin/develop` ที่ `23691b9` เข้าสู่ branch refactor เดียวกัน ตัวกรอง `name`/`role` ที่เพิ่มใน develop ถูกย้ายจาก Team CRUD ไป `TeamMembershipServiceImpl` โดยคงพฤติกรรมเดิม: ชื่อค้นบางส่วนแบบไม่สนตัวพิมพ์, role เทียบตรงแบบไม่สนตัวพิมพ์, ส่งทั้งคู่ต้องตรงทั้งคู่ และตัดช่องว่างหัวท้าย ก่อนแก้ เทสรวม 111 กรณีล้ม 2 กรณีเพราะ refactor ยังไม่ส่งตัวกรอง; หลังแก้รัน Docker + PostgreSQL ผ่าน **111/111**, 0 failures/errors/skipped และหยุด test-db แล้ว เทสที่ล้มตรวจ requirement ใหม่ถูกต้อง สาเหตุมาจากโค้ด refactor
+
+เมื่อเพิ่มโลโก้ทีม รัน `TeamLogoApiTests` บน Docker + PostgreSQL ผ่าน 4/4: อัปโหลด/อ่านภาพและ URL จากฐานข้อมูล, PUT ทีมแล้วโลโก้ไม่หาย, ปฏิเสธไฟล์ปลอม/ภาพกว้างเกินกำหนดโดยไม่เปลี่ยนทีม และปฏิเสธทีมที่ไม่มีจริง รันทั้งโปรเจกต์บนฐานทดสอบใหม่ผ่าน **115/115**, 0 failures/errors/skipped; runtime image build ผ่านและตรวจ user `app` เขียน named volume โลโก้ได้ การอัปโหลดผ่าน HTTP ของ runtime container จริงยังไม่ได้ลองแยกจาก MockMvc
+
+เมื่อเพิ่ม `gameId` และล็อกเกมของทีมวันที่ 9 ต.ค. 2026 รัน Docker + PostgreSQL บน branch ปัจจุบันผ่าน **121/121** และจำลองรวม source/test กับ `origin/develop` ที่ `59a826c` ใน worktree แยกผ่าน **137/137**, 0 failures/errors/skipped; ตรวจสร้างทีมแล้ว DB/GET/list ตอบเกมตรงกัน, ขาดเกม 400, id เกมไม่มี 404 โดยไม่บันทึกทีม, PUT ไม่ส่งเกมคงค่าเดิม, เกมเดิมส่งซ้ำได้, เกมอื่นตอบ 409 โดยไม่แก้ชื่อ/เกมใน DB และทีมเก่า `game_id = NULL` ยังแก้ข้อมูลอื่นหรือกำหนดเกมภายหลังได้ การรวมนี้เป็นการทดสอบชั่วคราว ยังไม่ได้ merge develop รอบใหม่ลง branch งานจริง
+
+`TeamPlayerTournamentFlowTests` ทดสอบ flow ผู้จัดสร้างทีม ROV → เพิ่มผู้เล่น 5 คน → สร้างทัวร์ ROV → ลงทีม → ปฏิเสธทีมต่างเกม → ปฏิเสธการเปลี่ยนเกมของทีมเดิมและตรวจข้อมูลเดิมยังอยู่ ขั้นลงทีมเรียก `TournamentTeamService` โดยตรงเพราะยังไม่มี HTTP endpoint สำหรับขั้นนี้ บนฐาน PostgreSQL ทดสอบใหม่ flow ผ่าน **1/1** และชุดเต็มผ่าน **122/122** วันที่ 9 ต.ค. 2026 ขณะทดสอบพบว่า POST ทัวร์ที่เว้น `pointsPerKill` ได้ 409 จากค่า NULL ในคอลัมน์ NOT NULL แม้ DB มี default 1; fixture จึงส่ง `pointsPerKill: 1` เพื่อทดสอบ flow ที่เหลือ ประเด็นค่าเริ่มต้นนี้เป็นงานของเจ้าของ Tournament ที่ต้องแก้และเพิ่ม test แยก
+
+วันที่ 10 ต.ค. 2026 เพิ่ม `TeamTournamentHistoryBehaviorTests` เพื่อยืนยัน **พฤติกรรมปัจจุบัน** กับ PostgreSQL จริง 3 กรณี: ทีมเดียวลงสองทัวร์วันไม่ซ้อนกันแล้วเปลี่ยนชื่อทีม/ถอดผู้เล่นหลังตั้งสถานะทัวร์ `COMPLETED` ได้ โดยทั้งสองรายการยังอ้างทีม id เดียวและจำนวนสมาชิกปัจจุบันลดลง; ลบทีมที่มีเพียงการลงทะเบียนแล้วรายการลงทะเบียนของทั้งสองทัวร์หาย (ทัวร์ยังอยู่); ถ้ามีแมตช์อ้างทีม การลบได้ 409 จาก FK และข้อมูลทีม/การลงทะเบียน/แมตช์ยังอยู่ ชุดเต็มบนฐานทดสอบใหม่ผ่าน **125/125** การทดสอบนี้บันทึกช่องว่างเรื่องประวัติ ไม่ได้แปลว่าพฤติกรรมดังกล่าวเป็น requirement ที่ต้องคงไว้; ต้องออกแบบ snapshot ทีม/roster รายทัวร์และนโยบายลบกับเจ้าของ Tournament/DB ก่อนเปลี่ยนโค้ด
+
+ต่อมาเพิ่มกรณีเทียบสถานะ `UPCOMING` กับ `COMPLETED`: หลังลงทะเบียนทีมแล้ว ทั้งสองสถานะยังเปลี่ยนชื่อทีม/ผู้เล่น เพิ่มผู้เล่นใหม่ และลบผู้เล่นผ่าน API ได้ โดยอ่านกลับแล้วชื่อและจำนวนสมาชิกปัจจุบันตรงกับที่แก้; ทดสอบลบทีมขณะ `UPCOMING` ที่ยังไม่มีแมตช์ ได้ 204 และรายการลงทะเบียนหายเหมือนกรณีทัวร์จบแต่ไม่มีแมตช์ เทสไฟล์นี้ผ่าน **6/6** และชุดเต็มบน PostgreSQL ใหม่ผ่าน **128/128** สถานะ `COMPLETED` ในเทสตั้งผ่าน repository โดยตรง ไม่ได้พิสูจน์ขั้นตอนปิดทัวร์ผ่าน HTTP
 
 ก่อนส่ง PR ให้ตรวจ: Swagger แสดง endpoint ใหม่จริง, status/error ตรงกฎ, `git diff --check`, tests ผ่านบนโค้ดที่ส่ง, README/คู่มือนี้ตรงพฤติกรรมล่าสุด และแจ้งเจ้าของโมดูลที่ใช้ไฟล์ร่วม `.env` เป็นค่า local ไม่ commit และไม่ใส่รหัสผ่านหรือ token ในเอกสาร/PR

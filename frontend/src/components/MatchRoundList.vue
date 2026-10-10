@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import { formatRound, formatShortDate, formatTime } from '@/utils/format'
 import { MATCH_STATES, emptySlotLabel, getMatchState } from '@/utils/match'
 
@@ -42,7 +43,10 @@ function rowOf(match) {
         <span class="score" :class="{ final: match.result }">{{ rowOf(match).score }}</span>
         <span class="team team-b" :class="{ placeholder: !match.teamB }">{{ rowOf(match).teamB }}</span>
         <span class="badge" :class="rowOf(match).state.tone">{{ rowOf(match).state.label }}</span>
-        <span class="detail">ดูรายละเอียด ›</span>
+        <RouterLink
+          class="detail"
+          :to="{ name: 'match-detail', params: { id: match.tournamentId, matchId: match.id } }"
+        >ดูรายละเอียด ›</RouterLink>
       </div>
     </section>
   </div>
@@ -103,6 +107,7 @@ function rowOf(match) {
 .info { background: var(--color-info-bg); color: var(--color-info); }
 .neutral { background: var(--color-neutral-bg); color: var(--color-muted); }
 .detail { flex-shrink: 0; color: var(--color-accent); font-size: 14px; font-weight: 500; white-space: nowrap; }
+.detail:hover { text-decoration: underline; }
 
 @media (max-width: 1200px) {
   .team-a { width: auto; flex: 1; min-width: 0; }

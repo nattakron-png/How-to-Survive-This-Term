@@ -106,3 +106,17 @@ export function getTournamentMatches(tournamentId) {
     }
   })
 }
+
+export function getMatch(tournamentId, matchId) {
+  const tournament = getTournament(tournamentId)
+  if (!tournament || tournament.format !== 'SINGLE_ELIMINATION') return null
+  const match = getTournamentMatches(tournament.id).find((m) => m.id === Number(matchId))
+  if (!match) return null
+  const playersOf = (team) => (team ? players.filter((p) => p.teamId === team.id) : [])
+  return {
+    ...match,
+    tournament,
+    teamAPlayers: playersOf(match.teamA),
+    teamBPlayers: playersOf(match.teamB),
+  }
+}

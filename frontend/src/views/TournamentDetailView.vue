@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import AppNavbar from '@/components/AppNavbar.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
 import ParticipantCard from '@/components/ParticipantCard.vue'
@@ -23,7 +23,13 @@ const tabs = computed(() => [
   ...(tournament.value?.format === 'SINGLE_ELIMINATION' ? [{ key: 'bracket', label: 'สายการแข่ง' }] : []),
   { key: 'matches', label: 'แมตช์ทั้งหมด' },
 ])
-const activeTab = ref('overview')
+const route = useRoute()
+const router = useRouter()
+const requestedTab = String(route.query.tab ?? 'overview')
+const activeTab = ref(tabs.value.some((t) => t.key === requestedTab) ? requestedTab : 'overview')
+watch(activeTab, (tab) => {
+  router.replace({ query: tab === 'overview' ? {} : { tab } })
+})
 
 const legend = [
   { label: 'จบแล้ว', tone: 'success' },

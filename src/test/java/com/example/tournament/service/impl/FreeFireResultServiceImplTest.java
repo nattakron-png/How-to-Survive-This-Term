@@ -2,6 +2,7 @@ package com.example.tournament.service.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.lenient;
@@ -20,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
 import com.example.tournament.domain.entity.FreeFireGame;
+import com.example.tournament.domain.entity.FreeFireGameResult;
 import com.example.tournament.domain.entity.Team;
 import com.example.tournament.domain.entity.Tournament;
 import com.example.tournament.domain.entity.TournamentPlacementPoint;
@@ -28,6 +30,7 @@ import com.example.tournament.domain.enums.TournamentFormat;
 import com.example.tournament.dto.request.FreeFireTeamResultRequest;
 import com.example.tournament.dto.request.RecordFreeFireResultsRequest;
 import com.example.tournament.dto.response.FreeFireGameResultsResponse;
+import com.example.tournament.dto.response.FreeFireGameSummaryResponse;
 import com.example.tournament.dto.response.FreeFireStandingsResponse;
 import com.example.tournament.event.FreeFireGameRecordedEvent;
 import com.example.tournament.exception.BusinessException;
@@ -238,5 +241,84 @@ class FreeFireResultServiceImplTest {
         point.setPlacement((short) placement);
         point.setPoints((short) value);
         return point;
+    }
+
+        // ---------- listGames: ตารางเกม ----------
+
+    @Test
+    void listGamesRejectsUnknownTournament() {
+        when(tournaments.findById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> service.listGames(1L));
+    }
+
+    @Test
+    void listGamesRejectsNonPointsTournament() {
+        tournament.setFormat(TournamentFormat.SINGLE_ELIMINATION);
+        when(tournaments.findById(1L)).thenReturn(Optional.of(tournament));
+
+        assertThrows(BusinessException.class, () -> service.listGames(1L));
+    }
+
+    @Test
+    void listGamesReturnsGamesInOrderWithBooyahTeam() {
+        FreeFireGame g1 = gameOf(10L, 1, "COMPLETED");
+        FreeFireGame g2 = gameOf(11L, 2, "SCHEDULED");
+        Team winner = teamOf(21L, "Blue Wave");
+        Team second = teamOf(22L, "Fire Ants");
+
+        when(tournaments.findById(1L)).thenReturn(Optional.of(tournament));
+        when(games.findByTournamentIdOrderByGameNumberAsc(1L)).thenReturn(List.of(g1, g2));
+        when(results.findByTournamentId(1L)).thenReturn(List.of(
+                resultOf(g1, second, 2),
+                resultOf(g1, winner, 1)));
+
+        List<FreeFireGameSummaryResponse> list = service.listGames(1L);
+
+        assertEquals(2, list.size());
+        assertEquals(1, list.get(0).gameNumber());
+        assertEquals("COMPLETED", list.get(0).status());
+        assertEquals(21L, list.get(0).booyahTeamId());
+        assertEquals("Blue Wave", list.get(0).booyahTeamName());
+    }
+
+    @Test
+    void listGamesLeavesBooyahEmptyForUnplayedGame() {
+        FreeFireGame g2 = gameOf(11L, 2, "SCHEDULED");
+        when(tournaments.findById(1L)).thenReturn(Optional.of(tournament));
+        when(games.findByTournamentIdOrderByGameNumberAsc(1L)).thenReturn(List.of(g2));
+        when(results.findByTournamentId(1L)).thenReturn(List.of());
+
+        FreeFireGameSummaryResponse only = service.listGames(1L).get(0);
+
+        assertEquals("SCHEDULED", only.status());
+        assertNull(only.booyahTeamId());
+        assertNull(only.booyahTeamName());
+    }
+
+    private FreeFireGame gameOf(Long id, int number, String status) {
+        FreeFireGame g = new FreeFireGame();
+        g.setId(id);
+        g.setTournament(tournament);
+        g.setGameNumber((short) number);
+        g.setStatus(status);
+        return g;
+    }
+
+    private static Team teamOf(Long id, String name) {
+        Team t = new Team();
+        t.setId(id);
+        t.setName(name);
+        return t;
+    }
+
+    private FreeFireGameResult resultOf(FreeFireGame g, Team team, int placement) {
+        FreeFireGameResult r = new FreeFireGameResult();
+        r.setGame(g);
+        r.setTournament(tournament);
+        r.setTeam(team);
+        r.setPlacement((short) placement);
+        r.setKills((short) 0);
+        return r;
     }
 }

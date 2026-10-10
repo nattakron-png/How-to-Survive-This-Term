@@ -43,3 +43,20 @@
 | 200 | สำเร็จ |
 | 404 | ไม่พบรายการ |
 | 409 | รายการไม่ได้เป็นแบบเก็บคะแนน |
+
+## GET /api/v1/tournaments/{tournamentId}/free-fire-games
+
+ตารางเกมของรายการ เรียงตามเลขเกม เกมที่ยังไม่แข่ง `booyahTeamId` และ `booyahTeamName` จะเป็น `null`
+
+```json
+[
+  { "id": 3, "gameNumber": 1, "scheduledAt": "2026-10-12T19:00:00", "status": "COMPLETED", "booyahTeamId": 4, "booyahTeamName": "Bravo" },
+  { "id": 4, "gameNumber": 2, "scheduledAt": null, "status": "SCHEDULED", "booyahTeamId": null, "booyahTeamName": null }
+]
+```
+
+| สถานะ | กรณี |
+|---|---|
+| 200 | สำเร็จ |
+| 404 | ไม่พบรายการ |
+| 409 | รายการนี้ไม่ใช่แบบเก็บคะแนน |

@@ -24,6 +24,7 @@ import com.example.tournament.dto.request.RecordFreeFireResultsRequest;
 import com.example.tournament.dto.response.FreeFireGameResultsResponse;
 import com.example.tournament.dto.response.FreeFireStandingsResponse;
 import com.example.tournament.dto.response.FreeFireTeamResultResponse;
+import com.example.tournament.dto.response.FreeFireGameSummaryResponse;
 import com.example.tournament.event.FreeFireGameRecordedEvent;
 import com.example.tournament.exception.BusinessException;
 import com.example.tournament.exception.ResourceNotFoundException;
@@ -153,6 +154,36 @@ public class FreeFireResultServiceImpl implements FreeFireResultService {
                 (int) games.countByTournamentIdAndStatus(tournamentId, COMPLETED),
                 calculator.standings(participants, results.findByTournamentId(tournamentId),
                         table, tournament.getPointsPerKill(), totalGames));
+    }
+
+        @Override
+    @Transactional(readOnly = true)
+    public List<FreeFireGameSummaryResponse> listGames(Long tournamentId) {
+        // 1. รายการต้องมีอยู่จริง → 404
+        Tournament tournament = tournaments.findById(tournamentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Tournament not found: " + tournamentId));
+
+        // 2. ต้องเป็นแบบเก็บคะแนน → 409
+        requirePointsFormat(tournament);
+
+        // 3. หาทีมอันดับ 1 (Booyah) ของแต่ละเกม จากผลทั้งรายการในคำสั่งเดียว
+        Map<Long, Team> booyahByGame = results.findByTournamentId(tournamentId).stream()
+                .filter(r -> r.getPlacement() == 1)
+                .collect(Collectors.toMap(r -> r.getGame().getId(), FreeFireGameResult::getTeam, (a, b) -> a));
+
+        // 4. เรียงตามเลขเกม เกมที่ยังไม่แข่งจะไม่มี Booyah (null)
+        return games.findByTournamentIdOrderByGameNumberAsc(tournamentId).stream()
+                .map(g -> {
+                    Team booyah = booyahByGame.get(g.getId());
+                    return new FreeFireGameSummaryResponse(
+                            g.getId(),
+                            (int) g.getGameNumber(),
+                            g.getScheduledAt(),
+                            g.getStatus(),
+                            booyah == null ? null : booyah.getId(),
+                            booyah == null ? null : booyah.getName());
+                })
+                .toList();
     }
 
     private FreeFireGame findGame(Long gameId) {

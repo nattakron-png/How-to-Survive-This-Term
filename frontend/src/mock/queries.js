@@ -1,35 +1,34 @@
 import { games } from './games'
-import { teams } from './teams'
 import { tournaments, tournamentTeams } from './tournaments'
 import { freeFireGames, matches, matchResults } from './matches'
 import { freeFireGameResults, tournamentPlacementPoints } from './freeFire'
 import { players } from './players'
+import { getRegisteredPlayers, getRegisteredTeam } from './rosters'
 
 export const TODAY = '2026-10-16'
 
 const byId = (list) => ({ get: (id) => list.find((x) => x.id === id) })
 const gameById = byId(games)
-const teamById = byId(teams)
 const tournamentById = byId(tournaments)
 
 function teamsOf(tournamentId) {
   return tournamentTeams
     .filter((tt) => tt.tournamentId === tournamentId)
     .sort((a, b) => a.joinedAt.localeCompare(b.joinedAt))
-    .map((tt) => teamById.get(tt.teamId))
+    .map((tt) => getRegisteredTeam(tt.tournamentId, tt.teamId))
 }
 
 function championOf(tournament) {
   if (tournament.status !== 'FINISHED') return null
   if (tournament.format === 'POINTS') {
     const top = getFreeFireStandings(tournament.id).standings[0]
-    return top && top.totalPoints > 0 ? teamById.get(top.teamId) : null
+    return top && top.totalPoints > 0 ? getRegisteredTeam(tournament.id, top.teamId) : null
   }
   const final = matches
     .filter((m) => m.tournamentId === tournament.id)
     .sort((a, b) => b.roundNumber - a.roundNumber)[0]
   const result = final && matchResults.find((r) => r.matchId === final.id)
-  return result ? teamById.get(result.winnerTeamId) : null
+  return result ? getRegisteredTeam(tournament.id, result.winnerTeamId) : null
 }
 
 function toTournamentView(t) {
@@ -64,8 +63,8 @@ export function getMatchesOn(date = TODAY) {
       ...m,
       tournament: tournamentById.get(m.tournamentId),
       teamCount: teamsOf(m.tournamentId).length,
-      teamA: teamById.get(m.teamAId),
-      teamB: teamById.get(m.teamBId),
+      teamA: getRegisteredTeam(m.tournamentId, m.teamAId),
+      teamB: getRegisteredTeam(m.tournamentId, m.teamBId),
     }))
 }
 
@@ -77,7 +76,7 @@ export function getTournament(id) {
     ...view,
     teams: view.teams.map((team) => ({
       ...team,
-      playerCount: players.filter((p) => p.teamId === team.id).length,
+      playerCount: getRegisteredPlayers(id, team.id).length,
     })),
   }
 }
@@ -98,8 +97,8 @@ export function getTournamentMatches(tournamentId) {
       ...m,
       displayNumber: displayNumberOf.get(m.id),
       teamCount,
-      teamA: teamById.get(m.teamAId) ?? null,
-      teamB: teamById.get(m.teamBId) ?? null,
+      teamA: getRegisteredTeam(id, m.teamAId),
+      teamB: getRegisteredTeam(id, m.teamBId),
       result: matchResults.find((r) => r.matchId === m.id) ?? null,
       feederA,
       feederB,
@@ -112,7 +111,7 @@ export function getMatch(tournamentId, matchId) {
   if (!tournament || tournament.format !== 'SINGLE_ELIMINATION') return null
   const match = getTournamentMatches(tournament.id).find((m) => m.id === Number(matchId))
   if (!match) return null
-  const playersOf = (team) => (team ? players.filter((p) => p.teamId === team.id) : [])
+  const playersOf = (team) => (team ? getRegisteredPlayers(tournament.id, team.id) : [])
   return {
     ...match,
     tournament,
@@ -121,8 +120,10 @@ export function getMatch(tournamentId, matchId) {
   }
 }
 
-export function getPlayersOfTeam(teamId) {
-  return players.filter((p) => p.teamId === Number(teamId))
+export function getPlayersOfTeam(teamId, tournamentId) {
+  return tournamentId == null
+    ? players.filter((p) => p.teamId === Number(teamId))
+    : getRegisteredPlayers(Number(tournamentId), Number(teamId))
 }
 
 export function getPlacementPoints(tournamentId) {
@@ -191,7 +192,7 @@ export function getNextFreeFireGame(tournamentId) {
 
 function withBooyah(game) {
   const booyah = freeFireGameResults.find((r) => r.gameId === game.id && r.placement === 1)
-  return { ...game, booyahTeam: booyah ? teamById.get(booyah.teamId) : null }
+  return { ...game, booyahTeam: booyah ? getRegisteredTeam(game.tournamentId, booyah.teamId) : null }
 }
 
 export function getRecentFreeFireGames(tournamentId, limit = 3) {
@@ -221,7 +222,7 @@ export function getFreeFireGameResult(tournamentId, gameNumber) {
       return {
         id: r.id,
         placement: r.placement,
-        team: teamById.get(r.teamId),
+        team: getRegisteredTeam(id, r.teamId),
         kills: r.kills,
         placementPoints,
         killPoints,
@@ -245,8 +246,8 @@ export function getPendingResults() {
       tournament: tournamentById.get(m.tournamentId),
       roundNumber: m.roundNumber,
       teamCount: teamsOf(m.tournamentId).length,
-      teamA: teamById.get(m.teamAId),
-      teamB: teamById.get(m.teamBId),
+      teamA: getRegisteredTeam(m.tournamentId, m.teamAId),
+      teamB: getRegisteredTeam(m.tournamentId, m.teamBId),
     }))
   const gameItems = freeFireGames
     .filter(isPlayedWithoutResult)

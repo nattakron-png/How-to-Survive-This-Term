@@ -5,6 +5,7 @@ import { tournaments, tournamentTeams } from './tournaments'
 import { freeFireGames, matches, matchResults } from './matches'
 import { freeFireGameResults, tournamentPlacementPoints } from './freeFire'
 import { TODAY } from './queries'
+import { captureRoster, removeRoster } from './rosters'
 
 export const DEFAULT_PLACEMENT_POINTS = [12, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0]
 export const MAX_POINTS_TEAMS = DEFAULT_PLACEMENT_POINTS.length
@@ -248,6 +249,7 @@ export async function addTeamToTournament(id, teamId) {
   if (t.format === 'POINTS' && teamIdsOf(t.id).length >= MAX_POINTS_TEAMS) throw new Error('FULL')
   const stamp = new Date(Date.parse(`${TODAY}T21:00:00Z`) + tournamentTeams.length * 1000).toISOString().slice(0, 19)
   tournamentTeams.push({ tournamentId: t.id, teamId: team.id, joinedAt: stamp })
+  captureRoster(t.id, team.id)
 }
 
 export async function removeTeamFromTournament(id, teamId) {
@@ -255,6 +257,7 @@ export async function removeTeamFromTournament(id, teamId) {
   const t = findTournament(id)
   assertEditable(t)
   removeWhere(tournamentTeams, (tt) => tt.tournamentId === t.id && tt.teamId === Number(teamId))
+  removeRoster(t.id, Number(teamId))
 }
 
 export function bracketSizeFor(teamCount) {

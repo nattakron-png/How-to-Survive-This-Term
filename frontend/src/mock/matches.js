@@ -1,0 +1,37 @@
+export const matches = [
+  { id: 1, tournamentId: 1, teamAId: 1, teamBId: 2, roundNumber: 1, matchNumber: 3, nextMatchId: null, scheduledAt: '2026-10-16T19:00:00', status: 'SCHEDULED' },
+  { id: 2, tournamentId: 2, teamAId: 14, teamBId: 17, roundNumber: 2, matchNumber: 1, nextMatchId: null, scheduledAt: '2026-10-16T20:00:00', status: 'SCHEDULED' },
+  { id: 3, tournamentId: 2, teamAId: 15, teamBId: 16, roundNumber: 2, matchNumber: 2, nextMatchId: null, scheduledAt: '2026-10-16T21:30:00', status: 'SCHEDULED' },
+  { id: 4, tournamentId: 7, teamAId: 12, teamBId: 15, roundNumber: 3, matchNumber: 1, nextMatchId: null, scheduledAt: '2026-06-20T19:00:00', status: 'COMPLETED' },
+  { id: 5, tournamentId: 8, teamAId: 32, teamBId: 33, roundNumber: 2, matchNumber: 1, nextMatchId: null, scheduledAt: '2026-09-20T20:00:00', status: 'COMPLETED' },
+  { id: 6, tournamentId: 10, teamAId: 1, teamBId: 4, roundNumber: 3, matchNumber: 1, nextMatchId: null, scheduledAt: '2026-08-10T19:00:00', status: 'COMPLETED' },
+  { id: 7, tournamentId: 14, teamAId: 40, teamBId: 37, roundNumber: 3, matchNumber: 1, nextMatchId: null, scheduledAt: '2026-05-15T20:00:00', status: 'COMPLETED' },
+]
+
+export const matchResults = [
+  { id: 1, matchId: 4, teamAScore: 3, teamBScore: 1, winnerTeamId: 12 },
+  { id: 2, matchId: 5, teamAScore: 3, teamBScore: 2, winnerTeamId: 32 },
+  { id: 3, matchId: 6, teamAScore: 3, teamBScore: 0, winnerTeamId: 1 },
+  { id: 4, matchId: 7, teamAScore: 3, teamBScore: 1, winnerTeamId: 40 },
+]
+
+export const freeFireGames = [
+  { id: 1, tournamentId: 6, gameNumber: 1, scheduledAt: null, status: 'COMPLETED' },
+  { id: 2, tournamentId: 6, gameNumber: 2, scheduledAt: null, status: 'COMPLETED' },
+  { id: 3, tournamentId: 6, gameNumber: 3, scheduledAt: null, status: 'COMPLETED' },
+  { id: 4, tournamentId: 6, gameNumber: 4, scheduledAt: null, status: 'COMPLETED' },
+  { id: 5, tournamentId: 6, gameNumber: 5, scheduledAt: null, status: 'SCHEDULED' },
+  { id: 6, tournamentId: 6, gameNumber: 6, scheduledAt: null, status: 'SCHEDULED' },
+  { id: 7, tournamentId: 6, gameNumber: 7, scheduledAt: null, status: 'SCHEDULED' },
+  { id: 8, tournamentId: 6, gameNumber: 8, scheduledAt: null, status: 'SCHEDULED' },
+  { id: 9, tournamentId: 6, gameNumber: 9, scheduledAt: null, status: 'SCHEDULED' },
+  { id: 10, tournamentId: 6, gameNumber: 10, scheduledAt: null, status: 'SCHEDULED' },
+  { id: 11, tournamentId: 11, gameNumber: 1, scheduledAt: null, status: 'COMPLETED' },
+  { id: 12, tournamentId: 11, gameNumber: 2, scheduledAt: null, status: 'COMPLETED' },
+  { id: 13, tournamentId: 11, gameNumber: 3, scheduledAt: null, status: 'COMPLETED' },
+  { id: 14, tournamentId: 11, gameNumber: 4, scheduledAt: null, status: 'COMPLETED' },
+  { id: 15, tournamentId: 11, gameNumber: 5, scheduledAt: null, status: 'COMPLETED' },
+  { id: 16, tournamentId: 11, gameNumber: 6, scheduledAt: null, status: 'COMPLETED' },
+  { id: 17, tournamentId: 11, gameNumber: 7, scheduledAt: null, status: 'COMPLETED' },
+  { id: 18, tournamentId: 11, gameNumber: 8, scheduledAt: null, status: 'COMPLETED' },
+]

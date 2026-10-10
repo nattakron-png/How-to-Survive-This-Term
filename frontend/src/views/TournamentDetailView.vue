@@ -5,6 +5,7 @@ import AppNavbar from '@/components/AppNavbar.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
 import ParticipantCard from '@/components/ParticipantCard.vue'
 import ResultRow from '@/components/ResultRow.vue'
+import TournamentBracket from '@/components/TournamentBracket.vue'
 import { getTournament, getTournamentMatches } from '@/mock/queries'
 import { formatDateRange, formatTournamentFormat, initials } from '@/utils/format'
 
@@ -14,14 +15,20 @@ const props = defineProps({
 
 const RECENT_LIMIT = 5
 
-const tabs = [
+const tournament = computed(() => getTournament(props.id))
+
+const tabs = computed(() => [
   { key: 'overview', label: 'ภาพรวม' },
-  { key: 'bracket', label: 'สายการแข่ง' },
+  ...(tournament.value?.format === 'SINGLE_ELIMINATION' ? [{ key: 'bracket', label: 'สายการแข่ง' }] : []),
   { key: 'matches', label: 'แมตช์ทั้งหมด' },
-]
+])
 const activeTab = ref('overview')
 
-const tournament = computed(() => getTournament(props.id))
+const legend = [
+  { label: 'จบแล้ว', tone: 'success' },
+  { label: 'รอแข่ง', tone: 'info' },
+  { label: 'รอคู่แข่ง', tone: 'neutral' },
+]
 const matches = computed(() => getTournamentMatches(props.id))
 
 const recentResults = computed(() =>
@@ -128,7 +135,16 @@ watch(() => props.id, () => { activeTab.value = 'overview' })
       </section>
 
       <section v-else class="section">
-        <p class="panel empty">สายการแข่งจะแสดงที่นี่</p>
+        <div class="legend">
+          <span class="legend-label">สถานะแมตช์:</span>
+          <span v-for="item in legend" :key="item.label" class="legend-badge" :class="item.tone">{{ item.label }}</span>
+        </div>
+        <TournamentBracket
+          :matches="matches"
+          :team-count="tournament.teams.length"
+          :champion="tournament.champion"
+          :tournament-name="tournament.name"
+        />
       </section>
     </main>
 
@@ -258,6 +274,13 @@ watch(() => props.id, () => { activeTab.value = 'overview' })
   color: var(--color-muted);
   font-size: 15px;
 }
+
+.legend { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.legend-label { color: var(--color-muted); font-size: 14px; }
+.legend-badge { padding: 4px 12px; border-radius: var(--radius-pill); font-size: 13px; font-weight: 600; }
+.legend-badge.success { background: var(--color-success-bg); color: var(--color-success); }
+.legend-badge.info { background: var(--color-info-bg); color: var(--color-info); }
+.legend-badge.neutral { background: var(--color-neutral-bg); color: var(--color-muted); }
 
 .not-found { align-items: flex-start; }
 

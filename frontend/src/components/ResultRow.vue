@@ -8,30 +8,33 @@ const props = defineProps({
 })
 
 const winnerId = computed(() => props.match.result?.winnerTeamId ?? null)
-const isWinner = (team) => winnerId.value === null || team?.id === winnerId.value
+const isBye = computed(() => props.match.status === 'COMPLETED' && (!props.match.teamA || !props.match.teamB))
+const isWinner = (team) => (isBye.value ? Boolean(team) : winnerId.value === null || team?.id === winnerId.value)
+const emptyLabel = computed(() => (isBye.value ? 'BYE' : 'รอผล'))
 </script>
 
 <template>
   <div class="row">
     <div class="round">
-      <span class="round-name">{{ formatRound(match.roundNumber, match.teamCount) }} · แมตช์ {{ match.matchNumber }}</span>
-      <span class="round-date">{{ match.scheduledAt ? formatShortDate(match.scheduledAt) : 'รอกำหนดวัน' }}</span>
+      <span class="round-name">{{ formatRound(match.roundNumber, match.teamCount) }} · แมตช์ {{ match.displayNumber ?? match.matchNumber }}</span>
+      <span class="round-date">{{ isBye ? 'ผ่านอัตโนมัติ' : match.scheduledAt ? formatShortDate(match.scheduledAt) : 'รอกำหนดวัน' }}</span>
     </div>
 
     <div class="team team-a" :class="{ loser: !isWinner(match.teamA) }">
-      <span class="team-name" :class="{ pending: !match.teamA }">{{ match.teamA?.name ?? 'รอผล' }}</span>
+      <span class="team-name" :class="{ pending: !match.teamA }">{{ match.teamA?.name ?? emptyLabel }}</span>
       <TeamLogo v-if="match.teamA" :team="match.teamA" :size="32" :font-size="11" />
     </div>
 
     <div class="score">
       <template v-if="match.result">{{ match.result.teamAScore }} – {{ match.result.teamBScore }}</template>
+      <span v-else-if="isBye" class="vs">–</span>
       <span v-else-if="match.scheduledAt" class="time">{{ formatTime(match.scheduledAt) }}</span>
       <span v-else class="vs">vs</span>
     </div>
 
     <div class="team" :class="{ loser: !isWinner(match.teamB) }">
       <TeamLogo v-if="match.teamB" :team="match.teamB" :size="32" :font-size="11" />
-      <span class="team-name" :class="{ pending: !match.teamB }">{{ match.teamB?.name ?? 'รอผล' }}</span>
+      <span class="team-name" :class="{ pending: !match.teamB }">{{ match.teamB?.name ?? emptyLabel }}</span>
     </div>
   </div>
 </template>

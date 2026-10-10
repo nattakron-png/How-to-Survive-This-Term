@@ -85,14 +85,24 @@ export function getTournament(id) {
 export function getTournamentMatches(tournamentId) {
   const id = Number(tournamentId)
   const teamCount = teamsOf(id).length
-  return matches
+  const sorted = matches
     .filter((m) => m.tournamentId === id)
     .sort((a, b) => a.roundNumber - b.roundNumber || a.matchNumber - b.matchNumber)
-    .map((m) => ({
+  const displayNumberOf = new Map(sorted.map((m, i) => [m.id, i + 1]))
+  const feedersOf = (matchId) =>
+    sorted.filter((m) => m.nextMatchId === matchId).map((m) => displayNumberOf.get(m.id))
+
+  return sorted.map((m) => {
+    const [feederA = null, feederB = null] = feedersOf(m.id)
+    return {
       ...m,
+      displayNumber: displayNumberOf.get(m.id),
       teamCount,
       teamA: teamById.get(m.teamAId) ?? null,
       teamB: teamById.get(m.teamBId) ?? null,
       result: matchResults.find((r) => r.matchId === m.id) ?? null,
-    }))
+      feederA,
+      feederB,
+    }
+  })
 }

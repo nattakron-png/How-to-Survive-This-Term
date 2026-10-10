@@ -17,6 +17,11 @@
   **ตอนเชื่อม API จริง ให้แก้แค่ไฟล์นี้** (เปลี่ยนเป็น `fetch('/api/v1/...')`) หน้าเว็บไม่ต้องแก้
 - การแปลงเป็นข้อความภาษาไทย (วันที่, รูปแบบการแข่ง, ชื่อรอบ, ตัวย่อทีม) อยู่ที่ `src/utils/format.js`
 
+## สายการแข่ง (แพ้คัดออก)
+- แมตช์เชื่อมกันด้วย `nextMatchId` ผู้ชนะของแมตช์ที่มี `matchNumber` น้อยกว่าไปอยู่ช่อง `teamA` ของแมตช์ถัดไป
+- BYE คือแมตช์รอบแรกที่ `status = 'COMPLETED'` และ `teamAId` หรือ `teamBId` เป็น `null` (ไม่มีแถวใน `match_results`)
+- ตัวอย่างใน mock: KKU ROV Cup (กำลังแข่ง), CP Valorant Showdown (6 ทีม มี BYE), Summer Valorant (จบแล้ว มีแชมป์)
+
 ## ค่าที่ทีมต้องตกลงกัน
 - `tournaments.status` ในฐานข้อมูลเป็น VARCHAR อิสระ (ยังไม่มี enum) — mock ใช้ `UPCOMING` | `ONGOING` | `FINISHED`
 - ยังไม่มีคอลัมน์ "แชมป์" — mock คำนวณจากผู้ชนะนัดชิง (`match_results.winner_team_id` ของรอบสุดท้าย)

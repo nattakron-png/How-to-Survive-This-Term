@@ -1,3 +1,4 @@
+
 package com.example.tournament.domain.entity;
 
 import java.time.LocalDateTime;
@@ -31,6 +32,7 @@ public class TournamentTeam {
     @Column(name = "joined_at", nullable = false)
     private LocalDateTime joinedAt;
 
+    // เก็บข้อมูลทีม ณ เวลาที่สมัครตามโครงสร้างของ develop
     @Column(name = "team_name", nullable = false, length = 150)
     private String teamName;
 
@@ -39,6 +41,10 @@ public class TournamentTeam {
 
     @Column(name = "team_logo_url", length = 500)
     private String teamLogoUrl;
+
+    // ลำดับ Seed ของทีมในทัวร์นาเมนต์
+    @Column(name = "seed")
+    private Integer seed;
 
     public TournamentTeam() {
     }
@@ -97,5 +103,13 @@ public class TournamentTeam {
 
     public void setTeamLogoUrl(String teamLogoUrl) {
         this.teamLogoUrl = teamLogoUrl;
+    }
+
+    public Integer getSeed() {
+        return seed;
+    }
+
+    public void setSeed(Integer seed) {
+        this.seed = seed;
     }
 }

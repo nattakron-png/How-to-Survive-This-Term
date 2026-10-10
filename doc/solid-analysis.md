@@ -1,5 +1,18 @@
 # SOLID Analysis
 
+# คนที่ 2 SOLID และ Design Patterns — Team/Player
+
+| SOLID | หลักฐานและข้อจำกัด |
+| --- | --- |
+| **S** หน้าที่เดียว | `TeamServiceImpl` จัดการทีม, `TeamMembershipServiceImpl` จัดสมาชิก, `TeamLogoServiceImpl` จัดโลโก้ ส่วน Controller รับ HTTP; `TournamentRosterSnapshotService` ยังรวมการคัดลอก/อ่าน snapshot และ SQL ในคลาสเดียว |
+| **O** เปิดให้ขยาย | `TeamLogoServiceImpl` พึ่ง `FileStorageService` จึงเพิ่มที่เก็บแบบ cloud ได้โดยไม่เปลี่ยนกฎ upload; ปัจจุบันมี implementation แบบ local ตัวเดียว |
+| **L** ใช้แทนกันได้ | Service ทำตาม interface แต่แต่ละตัวมี implementation เดียว ยังไม่มี contract test พิสูจน์การแทนกันของหลาย implementation |
+| **I** interface พอดีงาน | `TeamService`, `TeamMembershipService`, `TeamLogoService` และ `PlayerService` แยกหน้าที่; Controller ใช้เฉพาะ interface ที่เกี่ยวข้อง |
+| **D** พึ่ง abstraction | Controller รับ Service interface, โลโก้รับ `FileStorageService`, Service รับ Repository interface; snapshot ยังผูกกับ `JdbcTemplate` และ `TournamentTeamServiceImpl` พึ่ง snapshot service แบบ concrete |
+
+**Patterns/แนวทางที่ใช้จริง:** Service Layer แยกกฎจาก Controller; Repository (`TeamRepository`, `PlayerRepository`) แยกการเข้าถึงข้อมูล; DTO + Mapper แยก API จาก Entity; `FileStorageService` เป็นขอบเขตสำหรับเปลี่ยนที่เก็บไฟล์; V11 เก็บ **historical snapshot** ของทีมและผู้เล่นต่อทัวร์ ไม่ใช่ GoF Memento
+
+**สรุป:** S และ I ชัดที่สุด, O/D ทำได้บางส่วน, L ยังไม่มีหลักฐานพอจะอ้างว่าเคร่งครัด Chain of Responsibility, Strategy และ Observer ที่ใช้ในโมดูล Tournament/Schedule/Result เป็นงานสมาชิกอื่น
 
 
 ## คนที่ 4: โมดูลรูปแบบการแข่ง

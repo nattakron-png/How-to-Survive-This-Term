@@ -1,22 +1,12 @@
 <script setup>
 import { computed } from 'vue'
+import { MATCH_STATES as STATES, emptySlotLabel, getMatchState } from '@/utils/match'
 
 const props = defineProps({
   match: { type: Object, required: true },
 })
 
-const STATES = {
-  BYE: { label: 'ผ่านอัตโนมัติ', tone: 'success' },
-  DONE: { label: 'จบแล้ว', tone: 'success' },
-  READY: { label: 'รอแข่ง', tone: 'info' },
-  WAITING: { label: 'รอคู่แข่ง', tone: 'neutral' },
-}
-
-const state = computed(() => {
-  const m = props.match
-  if (m.status === 'COMPLETED') return m.teamA && m.teamB ? 'DONE' : 'BYE'
-  return m.teamA && m.teamB ? 'READY' : 'WAITING'
-})
+const state = computed(() => getMatchState(props.match))
 
 function slot(team, score, feeder) {
   const m = props.match
@@ -26,7 +16,7 @@ function slot(team, score, feeder) {
       : { name: 'BYE', score: '–', kind: 'bye' }
   }
   if (!team) {
-    return { name: feeder ? `รอผู้ชนะแมตช์ ${feeder}` : 'รอทีม', score: '–', kind: 'placeholder' }
+    return { name: emptySlotLabel(m, feeder), score: '–', kind: 'placeholder' }
   }
   if (m.result) {
     return { name: team.name, score, kind: team.id === m.result.winnerTeamId ? 'winner' : 'loser' }

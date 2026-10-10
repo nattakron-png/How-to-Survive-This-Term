@@ -6,6 +6,7 @@ import StatusBadge from '@/components/StatusBadge.vue'
 import ParticipantCard from '@/components/ParticipantCard.vue'
 import ResultRow from '@/components/ResultRow.vue'
 import TournamentBracket from '@/components/TournamentBracket.vue'
+import MatchRoundList from '@/components/MatchRoundList.vue'
 import { getTournament, getTournamentMatches } from '@/mock/queries'
 import { formatDateRange, formatTournamentFormat, initials } from '@/utils/format'
 
@@ -128,9 +129,7 @@ watch(() => props.id, () => { activeTab.value = 'overview' })
       </div>
 
       <section v-else-if="activeTab === 'matches'" class="section">
-        <div v-if="matches.length" class="panel">
-          <ResultRow v-for="match in matches" :key="match.id" :match="match" />
-        </div>
+        <MatchRoundList v-if="matches.length" :matches="matches" :team-count="tournament.teams.length" />
         <p v-else class="panel empty">ยังไม่มีแมตช์ในรายการนี้</p>
       </section>
 

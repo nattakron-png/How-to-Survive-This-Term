@@ -7,16 +7,21 @@ import { formatDateRange, formatTournamentFormat, initials } from '@/utils/forma
 
 const props = defineProps({
   tournament: { type: Object, required: true },
+  linkEnabled: { type: Boolean, default: true },
 })
 
 const MAX_LOGOS = 5
-const shownTeams = computed(() => props.tournament.teams.slice(0, MAX_LOGOS))
-const extraCount = computed(() => props.tournament.teams.length - MAX_LOGOS)
+const shownTeams = computed(() => (props.tournament.teams ?? []).slice(0, MAX_LOGOS))
+const extraCount = computed(() => (props.tournament.teams?.length ?? 0) - MAX_LOGOS)
 const logoText = computed(() => initials(props.tournament.name, 3))
 </script>
 
 <template>
-  <RouterLink :to="{ name: 'tournament-detail', params: { id: tournament.id } }" class="card">
+  <component
+    :is="linkEnabled ? RouterLink : 'article'"
+    :to="linkEnabled ? { name: 'tournament-detail', params: { id: tournament.id } } : undefined"
+    class="card"
+  >
     <div class="top">
       <span class="logo">
         <img v-if="tournament.logoUrl" :src="tournament.logoUrl" :alt="tournament.name" />
@@ -34,14 +39,14 @@ const logoText = computed(() => initials(props.tournament.name, 3))
       {{ formatDateRange(tournament.startDate, tournament.endDate) }}&nbsp;&nbsp;·&nbsp;&nbsp;{{ formatTournamentFormat(tournament.format, tournament.totalGames) }}
     </p>
 
-    <div class="teams">
+    <div v-if="tournament.teams" class="teams">
       <div class="logo-stack">
         <TeamLogo v-for="team in shownTeams" :key="team.id" :team="team" :size="32" :font-size="11" />
         <TeamLogo v-if="extraCount > 0" :label="`+${extraCount}`" :size="32" :font-size="11" muted />
       </div>
       <span class="team-count">{{ tournament.teams.length }} ทีม</span>
     </div>
-  </RouterLink>
+  </component>
 </template>
 
 <style scoped>

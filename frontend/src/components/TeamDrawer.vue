@@ -1,6 +1,5 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { getPlayersOfTeam } from '@/mock/queries'
 import { formatRound, formatShortDate, initials } from '@/utils/format'
 
 const props = defineProps({
@@ -12,7 +11,7 @@ const emit = defineEmits(['close'])
 
 const closeButton = ref(null)
 
-const players = computed(() => getPlayersOfTeam(props.team.id))
+const players = computed(() => props.team.players ?? [])
 
 const RESULT_TONES = {
   WIN: { label: 'ชนะ', tone: 'success' },

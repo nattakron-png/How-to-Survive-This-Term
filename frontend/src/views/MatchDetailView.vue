@@ -1,9 +1,9 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppNavbar from '@/components/AppNavbar.vue'
 import TeamLogo from '@/components/TeamLogo.vue'
-import { getMatch } from '@/mock/queries'
+import { loadTournament } from '@/api/public'
 import { formatDate, formatRound, formatTime, initials } from '@/utils/format'
 import { MATCH_STATES, emptySlotLabel, getMatchState } from '@/utils/match'
 
@@ -12,7 +12,28 @@ const props = defineProps({
   matchId: { type: String, required: true },
 })
 
-const match = computed(() => getMatch(props.id, props.matchId))
+const match = ref(null)
+const loading = ref(true)
+const loadError = ref(false)
+let requestId = 0
+watch(() => [props.id, props.matchId], async ([id, matchId]) => {
+  const current = ++requestId
+  match.value = null
+  loading.value = true
+  loadError.value = false
+  try {
+    const data = await loadTournament(id)
+    const found = data.matches.find((item) => item.id === Number(matchId))
+    if (current === requestId && found) {
+      match.value = {
+        ...found,
+        teamAPlayers: found.teamA?.players ?? [],
+        teamBPlayers: found.teamB?.players ?? [],
+      }
+    }
+  } catch { if (current === requestId) loadError.value = true }
+  finally { if (current === requestId) loading.value = false }
+}, { immediate: true })
 
 const state = computed(() => (match.value ? getMatchState(match.value) : null))
 
@@ -72,7 +93,9 @@ const sides = computed(() => {
   <div class="page">
     <AppNavbar />
 
-    <main v-if="match" class="content">
+    <main v-if="loading" class="content not-found" role="status">กำลังโหลดแมตช์…</main>
+    <main v-else-if="loadError" class="content not-found" role="alert">โหลดแมตช์ไม่สำเร็จ</main>
+    <main v-else-if="match" class="content">
       <nav class="breadcrumb" aria-label="breadcrumb">
         <RouterLink to="/tournaments">รายการแข่ง</RouterLink>
         <span>/</span>

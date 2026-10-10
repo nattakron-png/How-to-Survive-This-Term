@@ -12,16 +12,7 @@ import FreeFireStandings from '@/components/FreeFireStandings.vue'
 import FreeFireOverview from '@/components/FreeFireOverview.vue'
 import FreeFireSchedule from '@/components/FreeFireSchedule.vue'
 import FreeFireGameResult from '@/components/FreeFireGameResult.vue'
-import {
-  getFreeFireGameResult,
-  getFreeFireSchedule,
-  getFreeFireStandings,
-  getNextFreeFireGame,
-  getPlacementPoints,
-  getRecentFreeFireGames,
-  getTournament,
-  getTournamentMatches,
-} from '@/mock/queries'
+import { loadFreeFireGame, loadTournament } from '@/api/public'
 import { formatDate, formatDateRange, formatTime, formatTournamentFormat, initials } from '@/utils/format'
 
 const props = defineProps({
@@ -30,7 +21,25 @@ const props = defineProps({
 
 const RECENT_LIMIT = 5
 
-const tournament = computed(() => getTournament(props.id))
+const data = ref(null)
+const loading = ref(true)
+const loadError = ref(false)
+const tournament = computed(() => data.value?.tournament ?? null)
+let requestId = 0
+watch(() => props.id, async (id) => {
+  const current = ++requestId
+  data.value = null
+  loading.value = true
+  loadError.value = false
+  try {
+    const result = await loadTournament(id)
+    if (current === requestId) data.value = result
+  } catch {
+    if (current === requestId) loadError.value = true
+  } finally {
+    if (current === requestId) loading.value = false
+  }
+}, { immediate: true })
 
 const isPoints = computed(() => tournament.value?.format === 'POINTS')
 
@@ -49,14 +58,14 @@ const tabs = computed(() =>
       ],
 )
 
-const standings = computed(() => (isPoints.value ? getFreeFireStandings(props.id) : null))
-const placementPoints = computed(() => (isPoints.value ? getPlacementPoints(props.id) : []))
-const nextGame = computed(() => (isPoints.value ? getNextFreeFireGame(props.id) : null))
-const recentGames = computed(() => (isPoints.value ? getRecentFreeFireGames(props.id) : []))
-const schedule = computed(() => (isPoints.value ? getFreeFireSchedule(props.id) : []))
-const gameResult = computed(() =>
-  isPoints.value && selectedGameNumber.value ? getFreeFireGameResult(props.id, selectedGameNumber.value) : null,
-)
+const standings = computed(() => data.value?.standings ?? null)
+const placementPoints = computed(() => data.value?.placementPoints ?? [])
+const schedule = computed(() => data.value?.schedule ?? [])
+const nextGame = computed(() => schedule.value.find((game) => game.status !== 'COMPLETED') ?? null)
+const recentGames = computed(() => schedule.value.filter((game) => game.status === 'COMPLETED').slice(-3).reverse())
+const gameResult = ref(null)
+const gameLoading = ref(false)
+const gameError = ref(false)
 const pointsByTeam = computed(
   () => new Map((standings.value?.standings ?? []).map((row) => [row.teamId, row.totalPoints])),
 )
@@ -73,8 +82,22 @@ const pointsSummary = computed(() => {
 const route = useRoute()
 const router = useRouter()
 const requestedTab = String(route.query.tab ?? 'overview')
-const activeTab = ref(tabs.value.some((t) => t.key === requestedTab) ? requestedTab : 'overview')
+const activeTab = ref(requestedTab)
 const selectedGameNumber = ref(route.query.game ? Number(route.query.game) : null)
+watch(tabs, (available) => {
+  if (!available.some((tab) => tab.key === activeTab.value)) activeTab.value = 'overview'
+})
+watch([selectedGameNumber, data], async ([number, loaded]) => {
+  gameResult.value = null
+  gameError.value = false
+  if (!number || !loaded || !isPoints.value) return
+  const game = loaded.schedule.find((item) => item.gameNumber === number && item.status === 'COMPLETED')
+  if (!game) return
+  gameLoading.value = true
+  try { gameResult.value = await loadFreeFireGame(game, loaded.tournament.teams) }
+  catch { gameError.value = true }
+  finally { gameLoading.value = false }
+})
 
 watch([activeTab, selectedGameNumber], ([tab, game]) => {
   const query = tab === 'overview' ? {} : { tab }
@@ -97,7 +120,7 @@ const legend = [
   { label: 'รอแข่ง', tone: 'info' },
   { label: 'รอคู่แข่ง', tone: 'neutral' },
 ]
-const matches = computed(() => getTournamentMatches(props.id))
+const matches = computed(() => data.value?.matches ?? [])
 
 const selectedTeamId = ref(null)
 const selectedTeam = computed(() => tournament.value?.teams.find((t) => t.id === selectedTeamId.value) ?? null)
@@ -105,7 +128,7 @@ const selectedTeam = computed(() => tournament.value?.teams.find((t) => t.id ===
 const recentResults = computed(() =>
   matches.value
     .filter((m) => m.result)
-    .toSorted((a, b) => b.scheduledAt.localeCompare(a.scheduledAt))
+    .toSorted((a, b) => (b.scheduledAt ?? '').localeCompare(a.scheduledAt ?? ''))
     .slice(0, RECENT_LIMIT),
 )
 
@@ -131,7 +154,12 @@ watch(() => props.id, () => {
   <div class="page">
     <AppNavbar />
 
-    <main v-if="tournament" class="content">
+    <main v-if="loading" class="content not-found" role="status">กำลังโหลดรายการแข่ง…</main>
+    <main v-else-if="loadError" class="content not-found" role="alert">
+      <h1 class="name">โหลดข้อมูลรายการแข่งไม่สำเร็จ</h1>
+      <RouterLink to="/tournaments" class="link">← กลับไปหน้ารายการแข่ง</RouterLink>
+    </main>
+    <main v-else-if="tournament" class="content">
       <nav class="breadcrumb" aria-label="breadcrumb">
         <RouterLink to="/tournaments">รายการแข่ง</RouterLink>
         <span>/</span>
@@ -197,7 +225,9 @@ watch(() => props.id, () => {
       />
 
       <section v-else-if="activeTab === 'games'" class="section">
-        <FreeFireGameResult v-if="gameResult" :result="gameResult" @back="selectedGameNumber = null" />
+        <p v-if="gameLoading" class="empty" role="status">กำลังโหลดผลเกม…</p>
+        <p v-else-if="gameError" class="empty" role="alert">โหลดผลเกมไม่สำเร็จ</p>
+        <FreeFireGameResult v-else-if="gameResult" :result="gameResult" @back="selectedGameNumber = null" />
         <FreeFireSchedule v-else :games="schedule" @open-game="openGame" />
       </section>
 

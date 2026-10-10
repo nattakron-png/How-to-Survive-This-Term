@@ -3,8 +3,16 @@
 .vscode
 .DS_Store
 target
+uploads
 .env
 .env.*
 !.env.example
 GIT-GUIDE.md
 *.pdf
+**/target
+**/node_modules
+code/frontend
+code/scripts
+test/frontend
+doc
+img

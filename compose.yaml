@@ -21,6 +21,7 @@ services:
   app:
     build:
       context: .
+      dockerfile: code/backend/Dockerfile
       target: runtime
     ports:
       - "127.0.0.1:${APP_PORT:-8080}:8080"
@@ -30,6 +31,9 @@ services:
       DB_NAME: ${DB_NAME:-tournament}
       DB_USERNAME: ${DB_USERNAME:-tournament}
       DB_PASSWORD: ${DB_PASSWORD:-tournament_local}
+      LOGO_STORAGE_DIR: /app/uploads/logos
+    volumes:
+      - logo_data:/app/uploads/logos
     depends_on:
       db:
         condition: service_healthy
@@ -59,6 +63,7 @@ services:
     profiles: ["test"]
     build:
       context: .
+      dockerfile: code/backend/Dockerfile
       target: development
     command: ["mvn", "-B", "test"]
     environment:
@@ -73,3 +78,4 @@ services:
 
 volumes:
   postgres_data:
+  logo_data:

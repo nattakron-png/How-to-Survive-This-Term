@@ -196,7 +196,7 @@ sequenceDiagram
     alt ไม่ผ่านกฎ
         S-->>C: Exception
         C-->>A: 400 / 404 / 409
-    else ผ่านกฎทั้ง 7 ข้อ
+    else ผ่านกฎทั้ง 8 ข้อ
         S->>DB: บันทึก match_results และเปลี่ยนแมตช์เป็น COMPLETED
         S->>P: publishEvent(MatchResultRecordedEvent)
         P->>L: onResultRecorded(event)

@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import com.example.tournament.domain.entity.Match;
 import com.example.tournament.domain.entity.Team;
 import com.example.tournament.domain.entity.Tournament;
+import com.example.tournament.domain.enums.TournamentStatus;
 import com.example.tournament.exception.BusinessException;
 import com.example.tournament.repository.MatchRepository;
 
@@ -70,7 +71,7 @@ class BracketProgressionListenerTest {
 
         listener.onResultRecorded(new MatchResultRecordedEvent(1L, 10L));
 
-        assertEquals("COMPLETED", fin.getTournament().getStatus());
+        assertEquals(TournamentStatus.COMPLETED, fin.getTournament().getStatus());
     }
 
     private Match givenMatch(int matchNumber, Match next) {

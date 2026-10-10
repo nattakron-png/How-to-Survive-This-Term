@@ -7,6 +7,7 @@ import com.example.tournament.domain.entity.Tournament;
 import com.example.tournament.exception.ResourceNotFoundException;
 import com.example.tournament.repository.FreeFireGameRepository;
 import com.example.tournament.repository.TournamentRepository;
+import com.example.tournament.domain.enums.TournamentStatus;
 
 @Component
 public class FreeFireCompletionListener {
@@ -32,7 +33,7 @@ public class FreeFireCompletionListener {
 
         long completed = games.countByTournamentIdAndStatus(tournament.getId(), "COMPLETED");
         if (completed >= totalGames) {
-            tournament.setStatus("COMPLETED");
+            tournament.setStatus(TournamentStatus.COMPLETED);
         }
     }
 }

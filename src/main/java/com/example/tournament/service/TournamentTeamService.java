@@ -16,7 +16,7 @@ public interface TournamentTeamService {
     // แสดงรายชื่อทีมในการแข่งขัน
     List<TournamentTeamResponse> listTeams(Long tournamentId);
 
-    // กำหนด Seed ให้ทีม
+    // กำหนด Seed ให้ทีมที่สมัครแล้ว
     List<TournamentTeamResponse> setSeeds(
             Long tournamentId,
             SeedAssignmentRequest request);

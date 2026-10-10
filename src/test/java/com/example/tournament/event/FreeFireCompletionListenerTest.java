@@ -15,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.example.tournament.domain.entity.Tournament;
+import com.example.tournament.domain.enums.TournamentStatus;
 import com.example.tournament.exception.ResourceNotFoundException;
 import com.example.tournament.repository.FreeFireGameRepository;
 import com.example.tournament.repository.TournamentRepository;
@@ -31,7 +32,7 @@ class FreeFireCompletionListenerTest {
     void setUp() {
         tournament = new Tournament();
         tournament.setId(1L);
-        tournament.setStatus("ONGOING");
+        tournament.setStatus(TournamentStatus.ONGOING);
         tournament.setTotalGames((short) 10);
     }
 
@@ -42,7 +43,7 @@ class FreeFireCompletionListenerTest {
 
         listener.onGameRecorded(new FreeFireGameRecordedEvent(5L, 1L));
 
-        assertEquals("ONGOING", tournament.getStatus());
+        assertEquals(TournamentStatus.ONGOING, tournament.getStatus());
     }
 
     @Test
@@ -52,7 +53,7 @@ class FreeFireCompletionListenerTest {
 
         listener.onGameRecorded(new FreeFireGameRecordedEvent(5L, 1L));
 
-        assertEquals("COMPLETED", tournament.getStatus());
+        assertEquals(TournamentStatus.COMPLETED, tournament.getStatus());
     }
 
     @Test
@@ -62,7 +63,7 @@ class FreeFireCompletionListenerTest {
 
         listener.onGameRecorded(new FreeFireGameRecordedEvent(5L, 1L));
 
-        assertEquals("ONGOING", tournament.getStatus());
+        assertEquals(TournamentStatus.ONGOING, tournament.getStatus());
         verify(games, never()).countByTournamentIdAndStatus(anyLong(), anyString());
     }
 

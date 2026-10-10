@@ -1,0 +1,106 @@
+package com.example.tournament.controller.api;
+
+import java.net.URI;
+import java.util.List;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import com.example.tournament.domain.enums.TournamentStatus;
+import com.example.tournament.dto.request.TournamentRequest;
+import com.example.tournament.dto.response.PlacementPointResponse;
+import com.example.tournament.dto.response.TournamentResponse;
+import com.example.tournament.service.TournamentService;
+
+import jakarta.validation.Valid;
+
+@RestController
+@RequestMapping("/api/v1/tournaments")
+public class TournamentController {
+
+    private final TournamentService tournaments;
+
+    public TournamentController(TournamentService tournaments) {
+        this.tournaments = tournaments;
+    }
+
+    @GetMapping
+    public List<TournamentResponse> list(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) TournamentStatus status) {
+
+        // ตรวจสอบว่าผู้ใช้ระบุคำค้นหาชื่อหรือไม่
+        boolean hasName = name != null && !name.isBlank();
+
+        // ถ้าไม่ได้ระบุชื่อและสถานะ ให้แสดงทัวร์นาเมนต์ทั้งหมด
+        if (!hasName && status == null) {
+            return tournaments.getAll();
+        }
+
+        // ถ้าระบุเฉพาะชื่อ ให้ค้นหาจากชื่อ
+        if (status == null) {
+            return tournaments.searchByName(name);
+        }
+
+        // ถ้าระบุเฉพาะสถานะ ให้ค้นหาจากสถานะ
+        if (!hasName) {
+            return tournaments.getByStatus(status);
+        }
+
+        // ถ้าระบุทั้งชื่อและสถานะ ให้ค้นหาด้วยเงื่อนไขทั้งสอง
+        return tournaments.searchByNameAndStatus(name, status);
+    }
+
+    @GetMapping("/{id}")
+    public TournamentResponse get(@PathVariable Long id) {
+        return tournaments.getById(id);
+    }
+
+    @GetMapping("/{id}/placement-points")
+    public List<PlacementPointResponse> getPlacementPoints(
+            @PathVariable Long id) {
+
+        return tournaments.getPlacementPoints(id);
+    }
+
+    @PostMapping
+    public ResponseEntity<TournamentResponse> create(
+            @Valid @RequestBody TournamentRequest request) {
+
+        TournamentResponse tournament = tournaments.create(request);
+
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(tournament.id())
+                .toUri();
+
+        return ResponseEntity
+                .created(location)
+                .body(tournament);
+    }
+
+    @PutMapping("/{id}")
+    public TournamentResponse update(
+            @PathVariable Long id,
+            @Valid @RequestBody TournamentRequest request) {
+
+        return tournaments.update(id, request);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        tournaments.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+}
+

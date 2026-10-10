@@ -19,6 +19,8 @@ public interface TournamentTeamRepository extends JpaRepository<TournamentTeam, 
 
     long countByTournamentId(Long tournamentId);
 
+    boolean existsByTeam_Id(Long teamId);
+
     @Query("""
             SELECT COUNT(tt)
             FROM TournamentTeam tt

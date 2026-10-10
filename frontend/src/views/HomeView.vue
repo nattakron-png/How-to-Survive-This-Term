@@ -1,26 +1,39 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppNavbar from '@/components/AppNavbar.vue'
 import MatchItem from '@/components/MatchItem.vue'
 import TournamentCard from '@/components/TournamentCard.vue'
 import FilterChip from '@/components/FilterChip.vue'
-import { TODAY, getGames, getLatestTournaments, getMatchesOn } from '@/mock/queries'
+import { games } from '@/mock/games'
+import { listPublicTournaments, loadTodayMatches } from '@/api/public'
 import { formatDate } from '@/utils/format'
 
 const ALL = 'ALL'
-const games = getGames()
-const gameOptions = [{ code: ALL, name: 'ทั้งหมด' }, ...games]
+const gameOptions = [{ code: ALL, name: 'ทั้งหมด' }, ...games.filter((game) => game.isActive)]
 
-const todayDate = formatDate(TODAY)
-const todayMatches = getMatchesOn(TODAY)
-const latestTournaments = getLatestTournaments(4)
+const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
+const todayDate = formatDate(today)
+const todayMatches = ref([])
+const latestTournaments = ref([])
+const loading = ref(true)
+const loadError = ref(false)
+onMounted(async () => {
+  try {
+    const [tournaments, matches] = await Promise.all([listPublicTournaments(), loadTodayMatches(today)])
+    latestTournaments.value = [...tournaments]
+      .sort((a, b) => b.startDate.localeCompare(a.startDate))
+      .slice(0, 4)
+    todayMatches.value = matches
+  } catch { loadError.value = true }
+  finally { loading.value = false }
+})
 
 const selectedGame = ref(ALL)
 const filteredTournaments = computed(() =>
   selectedGame.value === ALL
-    ? latestTournaments
-    : latestTournaments.filter((t) => t.game.code === selectedGame.value),
+    ? latestTournaments.value
+    : latestTournaments.value.filter((t) => t.game.code === selectedGame.value),
 )
 </script>
 
@@ -42,7 +55,9 @@ const filteredTournaments = computed(() =>
             <h2 class="today-title">แมตช์วันนี้</h2>
             <span class="today-date">{{ todayDate }}</span>
           </div>
-          <template v-if="todayMatches.length">
+          <p v-if="loading" class="empty" role="status">กำลังโหลดแมตช์…</p>
+          <p v-else-if="loadError" class="empty" role="alert">โหลดแมตช์ไม่สำเร็จ</p>
+          <template v-else-if="todayMatches.length">
             <MatchItem v-for="match in todayMatches" :key="match.id" :match="match" />
           </template>
           <p v-else class="empty">วันนี้ไม่มีแมตช์</p>
@@ -66,7 +81,9 @@ const filteredTournaments = computed(() =>
           <RouterLink to="/tournaments" class="see-all">ดูทั้งหมด →</RouterLink>
         </div>
 
-        <div v-if="filteredTournaments.length" class="card-grid">
+        <p v-if="loading" class="empty" role="status">กำลังโหลดรายการแข่ง…</p>
+        <p v-else-if="loadError" class="empty" role="alert">โหลดรายการแข่งไม่สำเร็จ</p>
+        <div v-else-if="filteredTournaments.length" class="card-grid">
           <TournamentCard v-for="t in filteredTournaments" :key="t.id" :tournament="t" />
         </div>
         <p v-else class="empty">ยังไม่มีรายการแข่งของเกมนี้</p>

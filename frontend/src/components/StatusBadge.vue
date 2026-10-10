@@ -10,6 +10,7 @@ const STATUS = {
   ONGOING: { label: 'กำลังแข่ง', tone: 'warning' },
   UPCOMING: { label: 'กำลังจะเริ่ม', tone: 'info' },
   FINISHED: { label: 'จบแล้ว', tone: 'neutral' },
+  COMPLETED: { label: 'จบแล้ว', tone: 'neutral' },
 }
 
 const config = computed(() => STATUS[props.status] ?? STATUS.FINISHED)

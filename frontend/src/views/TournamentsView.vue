@@ -1,12 +1,13 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppNavbar from '@/components/AppNavbar.vue'
 import FilterChip from '@/components/FilterChip.vue'
 import SelectBox from '@/components/SelectBox.vue'
 import TournamentCard from '@/components/TournamentCard.vue'
 import AppPagination from '@/components/AppPagination.vue'
-import { getGames, getTournaments } from '@/mock/queries'
+import { games } from '@/mock/games'
+import { listTournaments } from '@/api/tournaments'
 
 const PAGE_SIZE = 8
 const ALL = 'ALL'
@@ -20,14 +21,30 @@ const selectedStatus = ref(ALL)
 const sortBy = ref('date-desc')
 const page = ref(1)
 
-const tournaments = getTournaments()
-const gameOptions = [{ value: ALL, label: 'ทุกเกม' }, ...getGames().map((g) => ({ value: g.code, label: g.name }))]
+const tournaments = ref([])
+const loading = ref(true)
+const loadError = ref(false)
+
+async function loadTournaments() {
+  loading.value = true
+  loadError.value = false
+  try {
+    tournaments.value = await listTournaments()
+  } catch {
+    loadError.value = true
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadTournaments)
+const gameOptions = [{ value: ALL, label: 'ทุกเกม' }, ...games.filter((g) => g.isActive).map((g) => ({ value: g.code, label: g.name }))]
 
 const statusOptions = [
   { value: ALL, label: 'สถานะ: ทั้งหมด' },
   { value: 'ONGOING', label: 'สถานะ: กำลังแข่ง' },
   { value: 'UPCOMING', label: 'สถานะ: กำลังจะเริ่ม' },
-  { value: 'FINISHED', label: 'สถานะ: จบแล้ว' },
+  { value: 'COMPLETED', label: 'สถานะ: จบแล้ว' },
 ]
 
 const sortOptions = [
@@ -43,7 +60,7 @@ const SORTERS = {
 }
 
 const filtered = computed(() =>
-  tournaments
+  tournaments.value
     .filter((t) => selectedGame.value === ALL || t.game.code === selectedGame.value)
     .filter((t) => selectedStatus.value === ALL || t.status === selectedStatus.value)
     .filter((t) => !searchQuery.value || t.name.toLowerCase().includes(searchQuery.value))
@@ -62,7 +79,7 @@ watch([selectedGame, selectedStatus, sortBy, searchQuery], () => { page.value = 
     <main class="content">
       <div class="page-header">
         <h1 class="title">รายการแข่งทั้งหมด</h1>
-        <span class="count">{{ filtered.length }} รายการ</span>
+        <span v-if="!loading && !loadError" class="count">{{ filtered.length }} รายการ</span>
       </div>
       <p v-if="searchQuery" class="search-note">ผลการค้นหา “{{ route.query.q }}”</p>
 
@@ -83,7 +100,12 @@ watch([selectedGame, selectedStatus, sortBy, searchQuery], () => { page.value = 
         <SelectBox v-model="sortBy" :options="sortOptions" aria-label="เรียงลำดับ" />
       </div>
 
-      <template v-if="filtered.length">
+      <p v-if="loading" class="empty" role="status">กำลังโหลดรายการแข่ง…</p>
+      <div v-else-if="loadError" class="empty" role="alert">
+        <p>โหลดรายการแข่งไม่สำเร็จ</p>
+        <button type="button" class="retry" @click="loadTournaments">ลองอีกครั้ง</button>
+      </div>
+      <template v-else-if="filtered.length">
         <div class="card-grid">
           <TournamentCard v-for="t in paged" :key="t.id" :tournament="t" />
         </div>
@@ -131,6 +153,7 @@ watch([selectedGame, selectedStatus, sortBy, searchQuery], () => { page.value = 
   color: var(--color-muted);
   font-size: 15px;
 }
+.retry { margin-top: 12px; color: var(--color-accent); font-weight: 600; }
 
 @media (max-width: 640px) {
   .title { font-size: 30px; }

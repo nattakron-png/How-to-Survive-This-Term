@@ -1,20 +1,70 @@
 # SOLID Analysis
 
-# คนที่ 2 SOLID และ Design Patterns — Team/Player
+## คนที่ 2: โมดูล Team และ Player
 
-| SOLID | หลักฐานและข้อจำกัด |
-| --- | --- |
-| **S** หน้าที่เดียว | `TeamServiceImpl` จัดการทีม, `TeamMembershipServiceImpl` จัดสมาชิก, `TeamLogoServiceImpl` จัดโลโก้ ส่วน Controller รับ HTTP; `TournamentRosterSnapshotService` ยังรวมการคัดลอก/อ่าน snapshot และ SQL ในคลาสเดียว |
-| **O** เปิดให้ขยาย | `TeamLogoServiceImpl` พึ่ง `FileStorageService` จึงเพิ่มที่เก็บแบบ cloud ได้โดยไม่เปลี่ยนกฎ upload; ปัจจุบันมี implementation แบบ local ตัวเดียว |
-| **L** ใช้แทนกันได้ | Service ทำตาม interface แต่แต่ละตัวมี implementation เดียว ยังไม่มี contract test พิสูจน์การแทนกันของหลาย implementation |
-| **I** interface พอดีงาน | `TeamService`, `TeamMembershipService`, `TeamLogoService` และ `PlayerService` แยกหน้าที่; Controller ใช้เฉพาะ interface ที่เกี่ยวข้อง |
-| **D** พึ่ง abstraction | Controller รับ Service interface, โลโก้รับ `FileStorageService`, Service รับ Repository interface; snapshot ยังผูกกับ `JdbcTemplate` และ `TournamentTeamServiceImpl` พึ่ง snapshot service แบบ concrete |
+### S: Single Responsibility Principle (หลักเด่นของโมดูลนี้)
 
-**Patterns/แนวทางที่ใช้จริง:** Service Layer แยกกฎจาก Controller; Repository (`TeamRepository`, `PlayerRepository`) แยกการเข้าถึงข้อมูล; DTO + Mapper แยก API จาก Entity; `FileStorageService` เป็นขอบเขตสำหรับเปลี่ยนที่เก็บไฟล์; V11 เก็บ **historical snapshot** ของทีมและผู้เล่นต่อทัวร์ ไม่ใช่ GoF Memento
+**หลัก:** คลาสหนึ่งควรมีเหตุผลหลักที่ทำให้ต้องแก้เพียงเรื่องเดียว
 
-**สรุป:** S และ I ชัดที่สุด, O/D ทำได้บางส่วน, L ยังไม่มีหลักฐานพอจะอ้างว่าเคร่งครัด Chain of Responsibility, Strategy และ Observer ที่ใช้ในโมดูล Tournament/Schedule/Result เป็นงานสมาชิกอื่น
+| ไฟล์ | บรรทัด | สิ่งที่ทำ |
+| --- | --- | --- |
+| `service/impl/TeamServiceImpl.java` | 25, 56–102 | จัดการข้อมูลทีมปัจจุบัน ไม่เพิ่ม/ย้าย/ถอดผู้เล่น |
+| `service/impl/TeamMembershipServiceImpl.java` | 19, 34–70 | ค้นสมาชิก เพิ่ม/ย้าย และถอดผู้เล่นออกจากทีม |
+| `service/impl/TeamLogoServiceImpl.java` | 16, 30–46 | ตรวจทีม เก็บโลโก้ และบันทึก URL |
 
+**เหตุผล:** กฎสมาชิกหรือการเก็บโลโก้เปลี่ยนได้โดยไม่ต้องยัด logic กลับใน Team CRUD; Controller ส่งคำขอต่อ Service และ Mapper แปลง DTO แยกหน้าที่กัน
 
+**ข้อจำกัด:** `TournamentRosterSnapshotService` (บรรทัด 28–57) ยังรวมการคัดลอก/อ่าน snapshot และ SQL ในคลาสเดียว
+
+### O: Open/Closed Principle
+
+**หลัก:** เปิดให้เพิ่มพฤติกรรมใหม่โดยลดการแก้ส่วนที่ใช้งานอยู่
+
+| ไฟล์ | บรรทัด | สิ่งที่ทำ |
+| --- | --- | --- |
+| `service/storage/FileStorageService.java` | 5–11 | กำหนดสัญญาเก็บ อ่าน และลบโลโก้ |
+| `service/impl/TeamLogoServiceImpl.java` | 20–25 | พึ่ง `FileStorageService` ไม่รู้รายละเอียดการเก็บไฟล์ |
+| `service/storage/LocalFileStorageService.java` | 24 | implementation สำหรับไฟล์ local |
+
+**เหตุผล:** หากเพิ่ม cloud storage สามารถเขียน implementation ใหม่ตาม interface โดยกฎ upload ใน `TeamLogoServiceImpl` ไม่ต้องเปลี่ยน
+
+**ข้อจำกัด:** ปัจจุบันมี implementation จริงตัวเดียว; การเพิ่ม cloud ยังต้องตั้งค่า Spring bean และทดสอบพฤติกรรมให้ตรงกัน จึงไม่อ้างว่าทั้งโมดูลไม่ต้องแก้เมื่อเพิ่ม feature
+
+### D: Dependency Inversion Principle
+
+**หลัก:** ส่วนที่ประสานงานควรพึ่งสัญญา มากกว่าผูกกับ implementation ที่เปลี่ยนได้
+
+| ไฟล์ | บรรทัด | สิ่งที่ทำ |
+| --- | --- | --- |
+| `controller/api/TeamController.java` | 30–34 | รับ `TeamService` ผ่าน constructor ไม่สร้าง `TeamServiceImpl` เอง |
+| `controller/api/TeamMembershipController.java` | 22–26 | รับ `TeamMembershipService` ผ่าน constructor |
+| `service/impl/TeamLogoServiceImpl.java` | 20–25 | รับ `FileStorageService` และ `TeamRepository` ผ่าน constructor |
+
+**เหตุผล:** แต่ละส่วนทดสอบกับ mock dependency ได้โดยไม่ต้องเปิดฐานข้อมูลหรือเขียนไฟล์จริงทุกกรณี
+
+**ข้อจำกัด:** `TournamentTeamServiceImpl` ยังพึ่ง `TournamentRosterSnapshotService` แบบ concrete และ SnapshotService ใช้ `JdbcTemplate` พร้อม SQL โดยตรง
+
+### L: Liskov Substitution Principle
+
+| ไฟล์ | บรรทัด | สิ่งที่ทำ |
+| --- | --- | --- |
+| `service/storage/FileStorageService.java` | 5–11 | สัญญาของการเก็บ อ่าน และลบโลโก้ |
+| `service/storage/LocalFileStorageService.java` | 24 | ทำตาม interface ที่ `TeamLogoServiceImpl` เรียก |
+
+**เหตุผล:** โค้ดเรียกใช้ผ่าน `FileStorageService` จึงมีจุดให้แทน implementation ได้ แต่ตอนนี้มีตัวจริงเพียงตัวเดียว ยังไม่มี contract test เปรียบเทียบ local กับ cloud จึง **ยังไม่อ้างว่าพิสูจน์ LSP ครบ**
+
+### I: Interface Segregation Principle
+
+| ไฟล์ | บรรทัด | สิ่งที่ทำ |
+| --- | --- | --- |
+| `service/TeamService.java` | 9–20 | เฉพาะ Team CRUD |
+| `service/TeamMembershipService.java` | 8–14 | เฉพาะดู/เพิ่ม/ถอดสมาชิก |
+| `service/TeamLogoService.java` | 7–10 | เฉพาะอัปโหลดโลโก้ |
+| `service/PlayerService.java` | 9–20 | เฉพาะ Player CRUD |
+
+**เหตุผล:** Controller ของแต่ละงานพึ่งเฉพาะเมธอดที่ต้องใช้; ไม่มีเมธอดสมาชิกหรือโลโก้ยัดอยู่ใน `TeamService` ข้อจำกัดคือ `TeamLogoService` รับ `MultipartFile` จึงยังผูกกับ Spring Web
+
+**Design Patterns/แนวทางที่ใช้ในพาร์ทนี้:** Service Layer, Repository และ DTO/Mapper แยก HTTP–กฎ–ข้อมูล; `FileStorageService` เป็นขอบเขตสำหรับเปลี่ยน storage; V11 เก็บ historical snapshot ต่อทัวร์เพื่อรักษาข้อมูลย้อนหลัง โดย snapshot นี้ไม่ใช่ GoF Memento ส่วน Chain of Responsibility, Strategy และ Observer อยู่ในโมดูล Tournament/Schedule/Result ของสมาชิกอื่น
 ## คนที่ 4: โมดูลรูปแบบการแข่ง
 
 ### O: Open/Closed Principle (หลักเด่นของโมดูลนี้)

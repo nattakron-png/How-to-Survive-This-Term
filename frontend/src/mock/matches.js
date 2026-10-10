@@ -23,6 +23,13 @@ export const matches = [
   { id: 22, tournamentId: 7, teamAId: 18, teamBId: 19, roundNumber: 1, matchNumber: 4, nextMatchId: 24, scheduledAt: '2026-06-13T19:00:00', status: 'COMPLETED' },
   { id: 23, tournamentId: 7, teamAId: 12, teamBId: 14, roundNumber: 2, matchNumber: 1, nextMatchId: 4, scheduledAt: '2026-06-16T19:00:00', status: 'COMPLETED' },
   { id: 24, tournamentId: 7, teamAId: 15, teamBId: 19, roundNumber: 2, matchNumber: 2, nextMatchId: 4, scheduledAt: '2026-06-17T19:00:00', status: 'COMPLETED' },
+  { id: 25, tournamentId: 3, teamAId: 9, teamBId: 10, roundNumber: 1, matchNumber: 1, nextMatchId: 29, scheduledAt: '2026-10-06T19:00:00', status: 'COMPLETED' },
+  { id: 26, tournamentId: 3, teamAId: 8, teamBId: 11, roundNumber: 1, matchNumber: 2, nextMatchId: 29, scheduledAt: '2026-10-07T19:00:00', status: 'COMPLETED' },
+  { id: 27, tournamentId: 3, teamAId: 1, teamBId: 3, roundNumber: 1, matchNumber: 3, nextMatchId: 30, scheduledAt: '2026-10-15T19:00:00', status: 'SCHEDULED' },
+  { id: 28, tournamentId: 3, teamAId: 4, teamBId: 5, roundNumber: 1, matchNumber: 4, nextMatchId: 30, scheduledAt: '2026-10-15T20:30:00', status: 'SCHEDULED' },
+  { id: 29, tournamentId: 3, teamAId: 9, teamBId: 11, roundNumber: 2, matchNumber: 1, nextMatchId: 31, scheduledAt: '2026-10-14T20:00:00', status: 'SCHEDULED' },
+  { id: 30, tournamentId: 3, teamAId: null, teamBId: null, roundNumber: 2, matchNumber: 2, nextMatchId: 31, scheduledAt: '2026-10-18T19:00:00', status: 'PENDING' },
+  { id: 31, tournamentId: 3, teamAId: null, teamBId: null, roundNumber: 3, matchNumber: 1, nextMatchId: null, scheduledAt: '2026-10-20T19:00:00', status: 'PENDING' },
 ]
 
 export const matchResults = [
@@ -41,6 +48,8 @@ export const matchResults = [
   { id: 13, matchId: 22, teamAScore: 0, teamBScore: 2, winnerTeamId: 19 },
   { id: 14, matchId: 23, teamAScore: 2, teamBScore: 1, winnerTeamId: 12 },
   { id: 15, matchId: 24, teamAScore: 2, teamBScore: 0, winnerTeamId: 15 },
+  { id: 16, matchId: 25, teamAScore: 2, teamBScore: 1, winnerTeamId: 9 },
+  { id: 17, matchId: 26, teamAScore: 0, teamBScore: 2, winnerTeamId: 11 },
 ]
 
 export const freeFireGames = [

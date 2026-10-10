@@ -230,3 +230,73 @@ export function getFreeFireGameResult(tournamentId, gameNumber) {
     })
   return { game, rows }
 }
+
+const isPlayedWithoutResult = (item) =>
+  item.status !== 'COMPLETED' && item.scheduledAt && item.scheduledAt.slice(0, 10) < TODAY
+
+export function getPendingResults() {
+  const matchItems = matches
+    .filter((m) => isPlayedWithoutResult(m) && m.teamAId && m.teamBId)
+    .map((m) => ({
+      kind: 'MATCH',
+      key: `m-${m.id}`,
+      id: m.id,
+      scheduledAt: m.scheduledAt,
+      tournament: tournamentById.get(m.tournamentId),
+      roundNumber: m.roundNumber,
+      teamCount: teamsOf(m.tournamentId).length,
+      teamA: teamById.get(m.teamAId),
+      teamB: teamById.get(m.teamBId),
+    }))
+  const gameItems = freeFireGames
+    .filter(isPlayedWithoutResult)
+    .map((g) => ({
+      kind: 'FREE_FIRE_GAME',
+      key: `g-${g.id}`,
+      id: g.id,
+      scheduledAt: g.scheduledAt,
+      tournament: tournamentById.get(g.tournamentId),
+      gameNumber: g.gameNumber,
+      teamCount: teamsOf(g.tournamentId).length,
+    }))
+  return [...matchItems, ...gameItems].sort((a, b) => b.scheduledAt.localeCompare(a.scheduledAt))
+}
+
+function setupStatusOf(tournament) {
+  if (tournament.format === 'POINTS') {
+    return freeFireGames.some((g) => g.tournamentId === tournament.id) ? 'SCHEDULE_CREATED' : 'NO_SCHEDULE'
+  }
+  return matches.some((m) => m.tournamentId === tournament.id) ? 'BRACKET_CREATED' : 'NO_BRACKET'
+}
+
+export function getUpcomingTournaments(limit = 3) {
+  return tournaments
+    .filter((t) => t.status === 'UPCOMING')
+    .sort((a, b) => a.startDate.localeCompare(b.startDate))
+    .slice(0, limit)
+    .map((t) => ({ ...toTournamentView(t), setupStatus: setupStatusOf(t) }))
+}
+
+export function getAdminOverview() {
+  const countBy = (list, key) => list.reduce((acc, x) => acc.set(x[key], (acc.get(x[key]) ?? 0) + 1), new Map())
+  const tournamentsByStatus = countBy(tournaments, 'status')
+  const teamsByGame = countBy(teams, 'gameId')
+  const todayMatches = getMatchesOn(TODAY)
+  return {
+    updatedAt: `${TODAY}T21:00:00`,
+    tournaments: {
+      total: tournaments.length,
+      ongoing: tournamentsByStatus.get('ONGOING') ?? 0,
+      upcoming: tournamentsByStatus.get('UPCOMING') ?? 0,
+    },
+    teams: {
+      total: teams.length,
+      byGame: games.map((g) => ({ game: g, count: teamsByGame.get(g.id) ?? 0 })),
+    },
+    pendingResults: getPendingResults().length,
+    todayMatches: {
+      total: todayMatches.length,
+      waiting: todayMatches.filter((m) => m.status !== 'COMPLETED').length,
+    },
+  }
+}

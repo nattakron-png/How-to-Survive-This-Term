@@ -120,3 +120,7 @@ export function getMatch(tournamentId, matchId) {
     teamBPlayers: playersOf(match.teamB),
   }
 }
+
+export function getPlayersOfTeam(teamId) {
+  return players.filter((p) => p.teamId === Number(teamId))
+}

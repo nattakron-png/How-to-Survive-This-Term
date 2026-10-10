@@ -7,6 +7,7 @@ import ParticipantCard from '@/components/ParticipantCard.vue'
 import ResultRow from '@/components/ResultRow.vue'
 import TournamentBracket from '@/components/TournamentBracket.vue'
 import MatchRoundList from '@/components/MatchRoundList.vue'
+import TeamDrawer from '@/components/TeamDrawer.vue'
 import { getTournament, getTournamentMatches } from '@/mock/queries'
 import { formatDateRange, formatTournamentFormat, initials } from '@/utils/format'
 
@@ -38,6 +39,9 @@ const legend = [
 ]
 const matches = computed(() => getTournamentMatches(props.id))
 
+const selectedTeamId = ref(null)
+const selectedTeam = computed(() => tournament.value?.teams.find((t) => t.id === selectedTeamId.value) ?? null)
+
 const recentResults = computed(() =>
   matches.value
     .filter((m) => m.result)
@@ -56,7 +60,10 @@ const infoRows = computed(() => {
   ]
 })
 
-watch(() => props.id, () => { activeTab.value = 'overview' })
+watch(() => props.id, () => {
+  activeTab.value = 'overview'
+  selectedTeamId.value = null
+})
 </script>
 
 <template>
@@ -108,7 +115,13 @@ watch(() => props.id, () => { activeTab.value = 'overview' })
               <span class="section-meta">{{ tournament.teams.length }} ทีม · กดที่ทีมเพื่อดูผู้เล่น</span>
             </div>
             <div v-if="tournament.teams.length" class="participants">
-              <ParticipantCard v-for="team in tournament.teams" :key="team.id" :team="team" />
+              <ParticipantCard
+                v-for="team in tournament.teams"
+                :key="team.id"
+                :team="team"
+                :selected="team.id === selectedTeamId"
+                @select="selectedTeamId = team.id"
+              />
             </div>
             <p v-else class="empty">ยังไม่มีทีมเข้าร่วม</p>
           </section>
@@ -157,6 +170,16 @@ watch(() => props.id, () => { activeTab.value = 'overview' })
       <h1 class="name">ไม่พบรายการแข่ง</h1>
       <RouterLink to="/tournaments" class="link">← กลับไปหน้ารายการแข่ง</RouterLink>
     </main>
+
+    <Transition name="drawer">
+      <TeamDrawer
+        v-if="tournament && selectedTeam"
+        :team="selectedTeam"
+        :tournament="tournament"
+        :matches="matches"
+        @close="selectedTeamId = null"
+      />
+    </Transition>
   </div>
 </template>
 
@@ -288,6 +311,11 @@ watch(() => props.id, () => { activeTab.value = 'overview' })
 .legend-badge.neutral { background: var(--color-neutral-bg); color: var(--color-muted); }
 
 .not-found { align-items: flex-start; }
+
+.drawer-enter-active, .drawer-leave-active { transition: opacity 0.2s ease; }
+.drawer-enter-active :deep(.drawer), .drawer-leave-active :deep(.drawer) { transition: transform 0.25s ease; }
+.drawer-enter-from, .drawer-leave-to { opacity: 0; }
+.drawer-enter-from :deep(.drawer), .drawer-leave-to :deep(.drawer) { transform: translateX(100%); }
 
 @media (max-width: 1200px) {
   .columns { flex-direction: column-reverse; align-items: stretch; }

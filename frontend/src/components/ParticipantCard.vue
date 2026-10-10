@@ -3,11 +3,13 @@ import { initials } from '@/utils/format'
 
 defineProps({
   team: { type: Object, required: true },
+  selected: { type: Boolean, default: false },
 })
+defineEmits(['select'])
 </script>
 
 <template>
-  <article class="participant">
+  <button type="button" class="participant" :class="{ selected }" :aria-pressed="selected" @click="$emit('select', team)">
     <span class="logo">
       <img v-if="team.logoUrl" :src="team.logoUrl" :alt="team.name" />
       <template v-else>{{ initials(team.name) }}</template>
@@ -17,11 +19,15 @@ defineProps({
       <span class="players">ผู้เล่น {{ team.playerCount }} คน</span>
     </div>
     <span class="chevron" aria-hidden="true">›</span>
-  </article>
+  </button>
 </template>
 
 <style scoped>
 .participant {
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -34,6 +40,7 @@ defineProps({
   transition: border-color 0.15s;
 }
 .participant:hover { border-color: var(--color-muted); }
+.participant.selected { border: 2px solid var(--color-accent); padding: 15px; }
 .logo {
   display: flex;
   flex-shrink: 0;

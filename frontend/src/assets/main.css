@@ -14,6 +14,8 @@
   --color-neutral-bg: rgba(168, 168, 178, 0.15);
   --color-success: #73e08c;
   --color-success-bg: rgba(115, 224, 140, 0.15);
+  --color-danger: #ff7a7a;
+  --color-danger-bg: rgba(255, 122, 122, 0.15);
   --color-accent-bg: rgba(255, 253, 131, 0.08);
 
   --font-heading: 'Kanit', sans-serif;

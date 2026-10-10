@@ -1,3 +1,4 @@
+
 package com.example.tournament.service.impl;
 
 import java.time.LocalDateTime;
@@ -24,6 +25,7 @@ import com.example.tournament.dto.request.RecordFreeFireResultsRequest;
 import com.example.tournament.dto.response.FreeFireGameResultsResponse;
 import com.example.tournament.dto.response.FreeFireStandingsResponse;
 import com.example.tournament.dto.response.FreeFireTeamResultResponse;
+import com.example.tournament.dto.response.FreeFireGameSummaryResponse;
 import com.example.tournament.event.FreeFireGameRecordedEvent;
 import com.example.tournament.exception.BusinessException;
 import com.example.tournament.exception.ResourceNotFoundException;
@@ -221,6 +223,44 @@ public class FreeFireResultServiceImpl implements FreeFireResultService {
                         totalGames));
     }
 
+    // แสดงรายการเกม Free Fire ของทัวร์นาเมนต์
+    @Override
+    @Transactional(readOnly = true)
+    public List<FreeFireGameSummaryResponse> listGames(Long tournamentId) {
+        // ตรวจสอบว่าทัวร์นาเมนต์มีอยู่จริง
+        Tournament tournament = tournaments.findById(tournamentId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Tournament not found: " + tournamentId));
+
+        // ต้องเป็นรูปแบบเก็บคะแนน
+        requirePointsFormat(tournament);
+
+        // ดึงทีมอันดับ 1 ของแต่ละเกม
+        Map<Long, Team> booyahByGame = results.findByTournamentId(tournamentId)
+                .stream()
+                .filter(result -> result.getPlacement() == 1)
+                .collect(Collectors.toMap(
+                        result -> result.getGame().getId(),
+                        FreeFireGameResult::getTeam,
+                        (first, second) -> first));
+
+        // เรียงเกมตามหมายเลข และแสดง null หากเกมยังไม่มีผู้ชนะ
+        return games.findByTournamentIdOrderByGameNumberAsc(tournamentId)
+                .stream()
+                .map(game -> {
+                    Team booyah = booyahByGame.get(game.getId());
+
+                    return new FreeFireGameSummaryResponse(
+                            game.getId(),
+                            (int) game.getGameNumber(),
+                            game.getScheduledAt(),
+                            game.getStatus(),
+                            booyah == null ? null : booyah.getId(),
+                            booyah == null ? null : booyah.getName());
+                })
+                .toList();
+    }
+
     // ค้นหาเกม ถ้าไม่พบให้ตอบ 404
     private FreeFireGame findGame(Long gameId) {
         return games.findById(gameId)
@@ -261,17 +301,17 @@ public class FreeFireResultServiceImpl implements FreeFireResultService {
 
         int pointsPerKill = tournament.getPointsPerKill();
 
-        // สร้างแผนที่ teamId -> ชื่อทีม snapshot
-        Map<Long, String> snapshotNames = tournamentTeams
+        // ใช้ชื่อทีมที่บันทึกไว้ใน tournament_teams
+        Map<Long, String> teamNames = tournamentTeams
                 .findByTournamentId(tournament.getId())
                 .stream()
                 .collect(Collectors.toMap(
                         entry -> entry.getTeam().getId(),
-                        entry -> entry.getTeamNameSnapshot()));
+                        TournamentTeam::getTeamName));
 
         List<FreeFireTeamResultResponse> teamRows = rows.stream()
-                .sorted((a, b) -> Short.compare(
-                        a.getPlacement(), b.getPlacement()))
+                .sorted((first, second) -> Short.compare(
+                        first.getPlacement(), second.getPlacement()))
                 .map(result -> {
                     int placementScore = calculator.placementPoints(
                             result.getPlacement(), table);
@@ -279,8 +319,7 @@ public class FreeFireResultServiceImpl implements FreeFireResultService {
                     int killScore = calculator.killPoints(
                             result.getKills(), pointsPerKill);
 
-                    // ใช้ชื่อ snapshot ก่อน ถ้าไม่มีจึงใช้ชื่อทีมปัจจุบัน
-                    String teamName = snapshotNames.getOrDefault(
+                    String teamName = teamNames.getOrDefault(
                             result.getTeam().getId(),
                             result.getTeam().getName());
 

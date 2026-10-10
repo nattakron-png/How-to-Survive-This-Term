@@ -26,4 +26,6 @@ docker compose up -d --build --wait
 
 เปิด <http://localhost:8080/swagger-ui.html> เพื่อดูและทดลอง API ที่มีอยู่ หรือดู OpenAPI JSON ที่ <http://localhost:8080/v3/api-docs> หลังแก้โค้ดให้ rebuild แอปด้วย `docker compose up -d --build --wait app`
 
+โลโก้ทีมอัปโหลดผ่าน `PUT /api/v1/teams/{id}/logo` แบบ `multipart/form-data` ส่วน `file` (PNG/JPEG ไม่เกิน 2 MB) และดูรูปจาก `logoUrl` ที่ API ตอบ Docker เก็บรูปใน volume `logo_data` ซึ่งยังอยู่หลัง `docker compose down`; หากรันจาก IDE รูปอยู่ที่ `uploads/logos` ในเครื่อง รายละเอียดและข้อจำกัดอยู่ในคู่มือโมดูลด้านล่าง
+
 อ่านวิธี setup, รันจาก IDE, ทดสอบ และรายละเอียด Team API ได้ใน [คู่มือโมดูลทีมและผู้เล่น (คนที่ 2)](doc/team-player-module-guide.md)

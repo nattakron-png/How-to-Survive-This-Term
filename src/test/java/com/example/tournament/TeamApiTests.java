@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.example.tournament.domain.entity.Player;
 import com.example.tournament.repository.PlayerRepository;
+import com.example.tournament.repository.GameRepository;
 import com.example.tournament.repository.TeamRepository;
 
 @SpringBootTest
@@ -33,6 +34,9 @@ class TeamApiTests {
 
     @Autowired
     private TeamRepository teams;
+
+    @Autowired
+    private GameRepository games;
 
     @Autowired
     private PlayerRepository players;
@@ -47,6 +51,7 @@ class TeamApiTests {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value(name))
                 .andExpect(jsonPath("$.description").value("First description"))
+                .andExpect(jsonPath("$.gameId").value(gameId()))
                 .andExpect(jsonPath("$.createdAt").exists());
 
         Long id = teams.findByNameContainingIgnoreCase(
@@ -58,7 +63,8 @@ class TeamApiTests {
                 .param("size", "5"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1))
-                .andExpect(jsonPath("$.content[0].id").value(id));
+                .andExpect(jsonPath("$.content[0].id").value(id))
+                .andExpect(jsonPath("$.content[0].gameId").value(gameId()));
 
         mvc.perform(put("/api/v1/teams/{id}", id)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -86,7 +92,8 @@ class TeamApiTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id))
                 .andExpect(jsonPath("$.name").value(name))
-                .andExpect(jsonPath("$.description").value(""));
+                .andExpect(jsonPath("$.description").value(""))
+                .andExpect(jsonPath("$.gameId").value(gameId()));
 
         mvc.perform(get("/api/v1/teams")
                 .param("name", name)
@@ -117,7 +124,10 @@ class TeamApiTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id))
                 .andExpect(jsonPath("$.name").value(name))
-                .andExpect(jsonPath("$.description").value("First description"));
+                .andExpect(jsonPath("$.description").value("First description"))
+                .andExpect(jsonPath("$.gameId").value(gameId()));
+
+        assertEquals(gameId(), teams.findById(id).orElseThrow().getGame().getId());
     }
 
     @Test
@@ -176,6 +186,100 @@ class TeamApiTests {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(teamJson("  ", "")))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void creatingTeamRequiresExistingGameAndDoesNotSaveInvalidRequest() throws Exception {
+        String missingGameName = uniqueName();
+        mvc.perform(post("/api/v1/teams")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"" + missingGameName + "\"}"))
+                .andExpect(status().isBadRequest());
+
+        String unknownGameName = uniqueName();
+        mvc.perform(post("/api/v1/teams")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"" + unknownGameName + "\",\"gameId\":" + Long.MAX_VALUE + "}"))
+                .andExpect(status().isNotFound());
+
+        assertEquals(0, teams.findByNameContainingIgnoreCase(missingGameName,
+                org.springframework.data.domain.Pageable.unpaged()).getTotalElements());
+        assertEquals(0, teams.findByNameContainingIgnoreCase(unknownGameName,
+                org.springframework.data.domain.Pageable.unpaged()).getTotalElements());
+    }
+
+    @Test
+    void updateKeepsGameWhenOmittedAndCanAssignGameToLegacyTeam() throws Exception {
+        Long id = createTeam(uniqueName());
+        Long originalGameId = gameId();
+        String updatedName = uniqueName();
+
+        mvc.perform(put("/api/v1/teams/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"" + updatedName + "\",\"description\":\"updated\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.gameId").value(originalGameId));
+
+        String invalidName = uniqueName();
+        mvc.perform(put("/api/v1/teams/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"" + invalidName + "\",\"gameId\":" + Long.MAX_VALUE + "}"))
+                .andExpect(status().isNotFound());
+        assertEquals(updatedName, teams.findById(id).orElseThrow().getName());
+        assertEquals(originalGameId, teams.findById(id).orElseThrow().getGame().getId());
+
+        com.example.tournament.domain.entity.Team legacy = new com.example.tournament.domain.entity.Team();
+        legacy.setName(uniqueName());
+        legacy.setCreatedAt(LocalDateTime.now());
+        Long legacyId = teams.saveAndFlush(legacy).getId();
+        mvc.perform(get("/api/v1/teams/{id}", legacyId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.gameId").doesNotExist());
+
+        mvc.perform(put("/api/v1/teams/{id}", legacyId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"" + legacy.getName() + "\",\"description\":\"still legacy\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.gameId").doesNotExist());
+        assertNull(teams.findById(legacyId).orElseThrow().getGame());
+
+        mvc.perform(put("/api/v1/teams/{id}", legacyId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(teamJson(legacy.getName(), "assigned")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.gameId").value(originalGameId));
+        assertEquals(originalGameId, teams.findById(legacyId).orElseThrow().getGame().getId());
+    }
+
+    @Test
+    void rejectsChangingEstablishedTeamGameWithoutChangingSavedData() throws Exception {
+        String originalName = uniqueName();
+        Long id = createTeam(originalName);
+        Long originalGameId = gameId();
+        Long otherGameId = games.findAll().stream()
+                .map(game -> game.getId())
+                .filter(gameId -> !gameId.equals(originalGameId))
+                .findFirst().orElseThrow();
+
+        mvc.perform(put("/api/v1/teams/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"" + uniqueName() + "\",\"description\":\"changed\",\"gameId\":"
+                        + otherGameId + "}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value("Team game cannot be changed; create a new team for another game"));
+
+        mvc.perform(get("/api/v1/teams/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value(originalName))
+                .andExpect(jsonPath("$.gameId").value(originalGameId));
+        assertEquals(originalGameId, teams.findById(id).orElseThrow().getGame().getId());
+
+        mvc.perform(put("/api/v1/teams/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(teamJson(originalName, "updated description")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.gameId").value(originalGameId));
     }
 
     @Test
@@ -372,6 +476,11 @@ class TeamApiTests {
     }
 
     private String teamJson(String name, String description) {
-        return "{\"name\":\"" + name + "\",\"description\":\"" + description + "\"}";
+        return "{\"name\":\"" + name + "\",\"description\":\"" + description
+                + "\",\"gameId\":" + gameId() + "}";
+    }
+
+    private Long gameId() {
+        return games.findAll().getFirst().getId();
     }
 }

@@ -18,7 +18,6 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.example.tournament.dto.request.TeamRequest;
 import com.example.tournament.dto.response.PageResponse;
-import com.example.tournament.dto.response.TeamPlayerResponse;
 import com.example.tournament.dto.response.TeamResponse;
 import com.example.tournament.service.TeamService;
 
@@ -35,95 +34,33 @@ public class TeamController {
     }
 
     @GetMapping
-    public PageResponse<TeamResponse> list(
-            @RequestParam(required = false) String name,
+    public PageResponse<TeamResponse> list(@RequestParam(required = false) String name,
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
-
-        // ส่งชื่อที่ต้องการค้นหาและข้อมูล pagination ไปยัง Service
         return PageResponse.from(teams.list(name, pageable));
     }
 
     @GetMapping("/{id}")
     public TeamResponse get(@PathVariable Long id) {
-        // ดึงข้อมูล Team ตาม ID
         return teams.get(id);
     }
 
     @PostMapping
-    public ResponseEntity<TeamResponse> create(
-            @Valid @RequestBody TeamRequest request) {
-
-        // สร้าง Team ใหม่ผ่าน Service
+    public ResponseEntity<TeamResponse> create(@Valid @RequestBody TeamRequest request) {
         TeamResponse team = teams.create(request);
-
-        // สร้าง URL สำหรับ Team ที่เพิ่งสร้าง
-        URI location = ServletUriComponentsBuilder
-                .fromCurrentRequest()
-                .path("/{id}")
-                .buildAndExpand(team.id())
-                .toUri();
-
-        // HTTP 201 Created พร้อมข้อมูล Team
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}")
+                .buildAndExpand(team.id()).toUri();
         return ResponseEntity.created(location).body(team);
     }
 
     @PutMapping("/{id}")
-    public TeamResponse update(
-            @PathVariable Long id,
-            @Valid @RequestBody TeamRequest request) {
-
-        // แก้ไขข้อมูล Team ตาม ID
+    public TeamResponse update(@PathVariable Long id, @Valid @RequestBody TeamRequest request) {
         return teams.update(id, request);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
-
-        // ลบ Team ตาม ID
         teams.delete(id);
-
-        // HTTP 204 No Content
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/{id}/players")
-    public PageResponse<TeamPlayerResponse> listPlayers(
-            @PathVariable Long id,
-
-            // รับชื่อ Player ที่ต้องการค้นหา
-            // ไม่ส่งมาก็ได้
-            @RequestParam(required = false) String name,
-
-            // รับ Role ที่ต้องการค้นหา
-            // ไม่ส่งมาก็ได้
-            @RequestParam(required = false) String role,
-
-            // รองรับ pagination และเรียงตามชื่อ Player
-            @PageableDefault(size = 20, sort = "name") Pageable pageable) {
-
-        // ส่ง Team ID + name + role + pagination ไปยัง Service
-        return PageResponse.from(
-                teams.listPlayers(id, name, role, pageable));
-    }
-
-    @PutMapping("/{id}/players/{playerId}")
-    public TeamPlayerResponse addPlayer(
-            @PathVariable Long id,
-            @PathVariable Long playerId) {
-
-        // เพิ่ม Player เข้า Team
-        return teams.addPlayer(id, playerId);
-    }
-
-    @DeleteMapping("/{id}/players/{playerId}")
-    public ResponseEntity<Void> removePlayer(
-            @PathVariable Long id,
-            @PathVariable Long playerId) {
-
-        // นำ Player ออกจาก Team
-        teams.removePlayer(id, playerId);
-
-        // HTTP 204 No Content
-        return ResponseEntity.noContent().build();
-    }
 }

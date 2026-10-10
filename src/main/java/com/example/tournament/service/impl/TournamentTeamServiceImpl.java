@@ -1,3 +1,4 @@
+
 package com.example.tournament.service.impl;
 
 import java.time.LocalDateTime;
@@ -15,13 +16,16 @@ import com.example.tournament.domain.entity.Team;
 import com.example.tournament.domain.entity.Tournament;
 import com.example.tournament.domain.entity.TournamentTeam;
 import com.example.tournament.domain.entity.TournamentTeamId;
+import com.example.tournament.domain.enums.TournamentStatus;
 import com.example.tournament.dto.request.SeedAssignmentRequest;
 import com.example.tournament.dto.response.TournamentTeamResponse;
+import com.example.tournament.exception.BusinessException;
 import com.example.tournament.exception.ResourceNotFoundException;
 import com.example.tournament.exception.ValidationException;
 import com.example.tournament.repository.TeamRepository;
 import com.example.tournament.repository.TournamentRepository;
 import com.example.tournament.repository.TournamentTeamRepository;
+import com.example.tournament.service.TournamentRosterSnapshotService;
 import com.example.tournament.service.TournamentTeamService;
 import com.example.tournament.service.rule.TeamJoinRuleChain;
 
@@ -33,16 +37,19 @@ public class TournamentTeamServiceImpl implements TournamentTeamService {
     private final TournamentRepository tournamentRepository;
     private final TournamentTeamRepository tournamentTeamRepository;
     private final TeamJoinRuleChain teamJoinRuleChain;
+    private final TournamentRosterSnapshotService rosters;
 
     public TournamentTeamServiceImpl(
             TeamRepository teamRepository,
             TournamentRepository tournamentRepository,
             TournamentTeamRepository tournamentTeamRepository,
-            TeamJoinRuleChain teamJoinRuleChain) {
+            TeamJoinRuleChain teamJoinRuleChain,
+            TournamentRosterSnapshotService rosters) {
         this.teamRepository = teamRepository;
         this.tournamentRepository = tournamentRepository;
         this.tournamentTeamRepository = tournamentTeamRepository;
         this.teamJoinRuleChain = teamJoinRuleChain;
+        this.rosters = rosters;
     }
 
     @Override
@@ -56,42 +63,40 @@ public class TournamentTeamServiceImpl implements TournamentTeamService {
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Tournament not found"));
 
-        // ใช้กฎเดิมตรวจสอบสถานะ เกม จำนวนผู้เล่น และเงื่อนไขอื่น ๆ
+        // ตรวจสอบเงื่อนไขการสมัครทีมทั้งหมด
         teamJoinRuleChain.validate(team, tournament);
 
-        TournamentTeam entry = new TournamentTeam();
-        entry.setId(new TournamentTeamId(tournamentId, teamId));
-        entry.setTournament(tournament);
-        entry.setTeam(team);
-        entry.setJoinedAt(LocalDateTime.now());
+        // บันทึกข้อมูลทีม ณ วันที่สมัคร และสร้าง snapshot ของผู้เล่น
+        TournamentTeam tournamentTeam = new TournamentTeam();
+        tournamentTeam.setId(new TournamentTeamId(tournamentId, teamId));
+        tournamentTeam.setTournament(tournament);
+        tournamentTeam.setTeam(team);
+        tournamentTeam.setJoinedAt(LocalDateTime.now());
+        tournamentTeam.setTeamName(team.getName());
+        tournamentTeam.setTeamDescription(team.getDescription());
+        tournamentTeam.setTeamLogoUrl(team.getLogoUrl());
 
-        // บันทึกชื่อทีม ณ วันที่สมัคร เพื่อไม่ให้ชื่อในประวัติเปลี่ยนตามภายหลัง
-        entry.setTeamNameSnapshot(team.getName());
-
-        tournamentTeamRepository.save(entry);
+        tournamentTeamRepository.saveAndFlush(tournamentTeam);
+        rosters.capturePlayers(tournamentId, teamId);
     }
 
     @Override
     public void removeTeam(Long tournamentId, Long teamId) {
-        Tournament tournament = tournamentRepository.findById(tournamentId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Tournament not found"));
-
-        // อนุญาตให้นำทีมออกเฉพาะก่อนการแข่งขันเริ่ม
-        if (tournament.getStatus() !=
-                com.example.tournament.domain.enums.TournamentStatus.UPCOMING) {
-            throw new com.example.tournament.exception.BusinessException(
-                    "This operation is only allowed for upcoming tournaments");
-        }
-
         TournamentTeamId id = new TournamentTeamId(tournamentId, teamId);
 
-        TournamentTeam entry = tournamentTeamRepository.findById(id)
+        // ค้นหารายการสมัครทีมก่อน แล้วตรวจสอบสถานะจากรายการนั้น
+        TournamentTeam tournamentTeam = tournamentTeamRepository.findById(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Team is not registered in this tournament"));
 
-        tournamentTeamRepository.delete(entry);
+        if (tournamentTeam.getTournament().getStatus()
+                != TournamentStatus.UPCOMING) {
+            throw new BusinessException(
+                    "Cannot remove a team after the tournament has started");
+        }
+
+        tournamentTeamRepository.delete(tournamentTeam);
     }
 
     @Override
@@ -119,9 +124,8 @@ public class TournamentTeamServiceImpl implements TournamentTeamService {
                         new ResourceNotFoundException(
                                 "Tournament not found: " + tournamentId));
 
-        if (tournament.getStatus() !=
-                com.example.tournament.domain.enums.TournamentStatus.UPCOMING) {
-            throw new com.example.tournament.exception.BusinessException(
+        if (tournament.getStatus() != TournamentStatus.UPCOMING) {
+            throw new BusinessException(
                     "Seeds can only be changed for upcoming tournaments");
         }
 
@@ -142,7 +146,7 @@ public class TournamentTeamServiceImpl implements TournamentTeamService {
         Set<Long> submittedTeamIds = new HashSet<>();
         Set<Integer> submittedSeeds = new HashSet<>();
 
-        // ตรวจสอบข้อมูล Seed ก่อนแก้ไขข้อมูลในฐานข้อมูล
+        // ตรวจสอบข้อมูล Seed ให้ครบก่อนแก้ไขข้อมูลในฐานข้อมูล
         for (SeedAssignmentRequest.SeedItem item : request.assignments()) {
             if (item == null || item.teamId() == null || item.seed() == null
                     || item.teamId() <= 0 || item.seed() <= 0) {
@@ -167,6 +171,7 @@ public class TournamentTeamServiceImpl implements TournamentTeamService {
             }
         }
 
+        // บันทึก Seed หลังจากข้อมูลทั้งหมดผ่านการตรวจสอบแล้ว
         for (SeedAssignmentRequest.SeedItem item : request.assignments()) {
             entriesByTeamId.get(item.teamId()).setSeed(item.seed());
         }
@@ -182,7 +187,7 @@ public class TournamentTeamServiceImpl implements TournamentTeamService {
         return new TournamentTeamResponse(
                 entry.getTournament().getId(),
                 entry.getTeam().getId(),
-                entry.getTeamNameSnapshot(),
+                entry.getTeamName(),
                 entry.getJoinedAt(),
                 entry.getSeed());
     }

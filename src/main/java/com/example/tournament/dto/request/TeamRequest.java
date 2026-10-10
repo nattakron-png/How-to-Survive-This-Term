@@ -5,5 +5,6 @@ import jakarta.validation.constraints.Size;
 
 public record TeamRequest(
         @NotBlank @Size(max = 150) String name,
-        String description) {
+        String description,
+        Long gameId) {
 }

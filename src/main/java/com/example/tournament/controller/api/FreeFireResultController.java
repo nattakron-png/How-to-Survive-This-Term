@@ -1,6 +1,7 @@
 package com.example.tournament.controller.api;
 
 import java.net.URI;
+import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,6 +14,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.example.tournament.dto.request.RecordFreeFireResultsRequest;
 import com.example.tournament.dto.response.FreeFireGameResultsResponse;
+import com.example.tournament.dto.response.FreeFireGameSummaryResponse;
 import com.example.tournament.dto.response.FreeFireStandingsResponse;
 import com.example.tournament.service.FreeFireResultService;
 
@@ -44,5 +46,10 @@ public class FreeFireResultController {
     @GetMapping("/tournaments/{tournamentId}/standings")
     public FreeFireStandingsResponse standings(@PathVariable Long tournamentId) {
         return service.standings(tournamentId);
+    }
+
+        @GetMapping("/tournaments/{tournamentId}/free-fire-games")
+    public List<FreeFireGameSummaryResponse> games(@PathVariable Long tournamentId) {
+        return service.listGames(tournamentId);
     }
 }

@@ -4,7 +4,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import AdminLayout from '@/components/admin/AdminLayout.vue'
 import ConfirmDialog from '@/components/admin/ConfirmDialog.vue'
 import TeamLogo from '@/components/TeamLogo.vue'
-import { getFreeFireTournamentsToRecord, getMatchForResult, getMatchesToRecord, recordMatchResult } from '@/mock/admin'
+import { getFreeFireTournamentsToRecord, getMatchForResult, getMatchesToRecord, recordMatchResult } from '@/api/admin'
 import { formatDate, formatRound, formatShortDate, formatTime, formatTournamentFormat } from '@/utils/format'
 
 const route = useRoute()
@@ -142,7 +142,7 @@ async function save() {
     router.replace({ query: {} })
     version.value += 1
   } catch (e) {
-    saveError.value = ERROR_TEXT[e.message] ?? 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง'
+    saveError.value = ERROR_TEXT[e.message] ?? (e.status ? `บันทึกไม่สำเร็จ: ${e.message}` : 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง')
   } finally {
     saving.value = false
   }
@@ -184,7 +184,7 @@ const roundLabel = (m) => formatRound(m.roundNumber, m.teamCount)
               </span>
               <span class="card-text">
                 <span class="card-title">{{ m.teamA.name }} <span class="vs">vs</span> {{ m.teamB.name }}</span>
-                <span class="card-meta">{{ m.tournament.name }} · {{ formatShortDate(m.scheduledAt) }} {{ formatTime(m.scheduledAt) }}</span>
+                <span class="card-meta">{{ m.tournament.name }} · {{ m.scheduledAt ? `${formatShortDate(m.scheduledAt)} ${formatTime(m.scheduledAt)}` : 'ยังไม่กำหนดเวลา' }}</span>
               </span>
             </button>
           </section>
@@ -205,7 +205,7 @@ const roundLabel = (m) => formatRound(m.roundNumber, m.teamCount)
               </span>
               <span class="card-text">
                 <span class="card-title">{{ m.teamA.name }} <span class="vs">vs</span> {{ m.teamB.name }}</span>
-                <span class="card-meta">{{ m.tournament.name }} · {{ formatTime(m.scheduledAt) }}</span>
+                <span class="card-meta">{{ m.tournament.name }} · {{ m.scheduledAt ? formatTime(m.scheduledAt) : 'ยังไม่กำหนดเวลา' }}</span>
               </span>
             </button>
           </section>

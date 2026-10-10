@@ -6,7 +6,7 @@ import TournamentLogo from '@/components/admin/TournamentLogo.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import SelectBox from '@/components/SelectBox.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
-import { deleteTournament, getAdminTournaments } from '@/mock/admin'
+import { deleteTournament, getAdminTournaments } from '@/api/admin'
 import { getGames } from '@/mock/queries'
 import { formatDateRange } from '@/utils/format'
 
@@ -73,6 +73,8 @@ async function confirmDelete(t) {
   try {
     await deleteTournament(t.id)
     version.value += 1
+  } catch (e) {
+    window.alert(e.status ? `ลบไม่สำเร็จ: ${e.message}` : 'ลบไม่สำเร็จ ลองใหม่อีกครั้ง')
   } finally {
     deletingId.value = null
     confirmingId.value = null

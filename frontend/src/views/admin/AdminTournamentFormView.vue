@@ -11,7 +11,7 @@ import {
   getTournamentForm,
   updateTournament,
   updateTournamentStatus,
-} from '@/mock/admin'
+} from '@/api/admin'
 import { getGames } from '@/mock/queries'
 import { formatDate, formatTournamentFormat } from '@/utils/format'
 
@@ -155,7 +155,7 @@ async function submit() {
     }
   } catch (e) {
     if (e.fields) errors.value = e.fields
-    else saveError.value = 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง'
+    else saveError.value = e.status ? `บันทึกไม่สำเร็จ: ${e.message}` : 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง'
   } finally {
     saving.value = false
   }

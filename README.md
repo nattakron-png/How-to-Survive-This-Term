@@ -13,8 +13,7 @@
 | ลำดับ | ชื่อ-นามสกุล | รหัสนักศึกษา | Section | Branch | หน้าที่รับผิดชอบ |
 | ---: | --- | --- | --- | --- | --- |
 | 1 | นายคณิศร มาประจักษ์ | 673380031-3 | 2 | `Kanisorn-maprajuk_6733800313_02` | Database, Entity, Flyway Migration และ Authentication |
-| 2 | นายวัชรพล ดวงกองเงิน | 673380290-9 | 2 | `Vacharapoln-
-Doungkongngern_6733802909_02` | Team และ Player Management, Docker, Swagger และ Deployment |
+| 2 | นายวัชรพล ดวงกองเงิน | 673380290-9 | 2 | `Vacharapoln-Doungkongngern_6733802909_02` | Team และ Player Management, Docker, Swagger และ Deployment |
 | 3 | นายสิรภัทร ลีล้าน | 673380067-2 | 2 | `Siraphat-leelan_6733800672_02` | TODO: Tournament + TournamentTeam (Chain of Responsibility) หรือ รูปแบบการแข่ง |
 | 4 | นายนฤเศรษฐ์ อภิลักขิตพงศ์ | 673380044-4 | 2 | `Naruset-Apilukkitapong-6733800444_02` | TODO: รูปแบบการแข่ง (Strategy) หรือ Tournament + TournamentTeam |
 | 5 | นายณัฐกร รุ่งฟ้า | 673380512-7 | 2 | `Nattakron-rungfa_6733805127_02` | Match Result, Free Fire Points (Observer) และ CI |

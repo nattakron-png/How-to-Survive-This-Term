@@ -25,6 +25,7 @@ import com.example.tournament.exception.ValidationException;
 import com.example.tournament.mapper.TeamMapper;
 import com.example.tournament.repository.GameRepository;
 import com.example.tournament.repository.TeamRepository;
+import com.example.tournament.repository.TournamentTeamRepository;
 
 @ExtendWith(MockitoExtension.class)
 class TeamServiceImplTest {
@@ -38,8 +39,23 @@ class TeamServiceImplTest {
     @Mock
     private TeamMapper mapper;
 
+    @Mock
+    private TournamentTeamRepository registrations;
+
     @InjectMocks
     private TeamServiceImpl service;
+
+    @Test
+    void deleteRejectsTeamWithTournamentHistory() {
+        Team team = team(1L);
+        when(teams.findById(1L)).thenReturn(Optional.of(team));
+        when(registrations.existsByTeam_Id(1L)).thenReturn(true);
+
+        BusinessException error = assertThrows(BusinessException.class, () -> service.delete(1L));
+
+        assertEquals("Team has tournament history and cannot be deleted", error.getMessage());
+        verify(teams, never()).delete(any(Team.class));
+    }
 
     @Test
     void createRejectsDuplicateNameBeforeSaving() {

@@ -21,9 +21,11 @@ import com.example.tournament.domain.entity.Tournament;
 import com.example.tournament.domain.entity.TournamentTeam;
 import com.example.tournament.domain.enums.TournamentStatus;
 import com.example.tournament.exception.ResourceNotFoundException;
+import com.example.tournament.exception.BusinessException;
 import com.example.tournament.repository.TeamRepository;
 import com.example.tournament.repository.TournamentRepository;
 import com.example.tournament.repository.TournamentTeamRepository;
+import com.example.tournament.service.TournamentRosterSnapshotService;
 import com.example.tournament.service.rule.TeamJoinRuleChain;
 import com.example.tournament.domain.entity.TournamentTeamId;
 
@@ -42,6 +44,9 @@ class TournamentTeamServiceImplTest {
         @Mock
         private TeamJoinRuleChain teamJoinRuleChain;
 
+        @Mock
+        private TournamentRosterSnapshotService rosters;
+
         private TournamentTeamServiceImpl service;
         private Team team;
         private Tournament tournament;
@@ -52,7 +57,8 @@ class TournamentTeamServiceImplTest {
                                 teamRepository,
                                 tournamentRepository,
                                 tournamentTeamRepository,
-                                teamJoinRuleChain);
+                                teamJoinRuleChain,
+                                rosters);
 
                 team = new Team();
                 team.setId(10L);
@@ -74,7 +80,8 @@ class TournamentTeamServiceImplTest {
                 service.addTeam(20L, 10L);
 
                 verify(teamJoinRuleChain).validate(team, tournament);
-                verify(tournamentTeamRepository).save(any(TournamentTeam.class));
+                verify(tournamentTeamRepository).saveAndFlush(any(TournamentTeam.class));
+                verify(rosters).capturePlayers(20L, 10L);
         }
 
         @Test
@@ -88,7 +95,7 @@ class TournamentTeamServiceImplTest {
 
                 verify(tournamentRepository, never()).findById(20L);
                 verify(teamJoinRuleChain, never()).validate(any(), any());
-                verify(tournamentTeamRepository, never()).save(any());
+                verify(tournamentTeamRepository, never()).saveAndFlush(any());
         }
 
         @Test
@@ -103,7 +110,7 @@ class TournamentTeamServiceImplTest {
                                 () -> service.addTeam(20L, 10L));
 
                 verify(teamJoinRuleChain, never()).validate(any(), any());
-                verify(tournamentTeamRepository, never()).save(any());
+                verify(tournamentTeamRepository, never()).saveAndFlush(any());
         }
 
         @Test
@@ -113,6 +120,7 @@ class TournamentTeamServiceImplTest {
                                         TournamentTeamId id = invocation.getArgument(0);
                                         TournamentTeam relation = new TournamentTeam();
                                         relation.setId(id);
+                                        relation.setTournament(tournament);
                                         return Optional.of(relation);
                                 });
 
@@ -132,5 +140,18 @@ class TournamentTeamServiceImplTest {
 
                 verify(tournamentTeamRepository, never())
                                 .delete(any(TournamentTeam.class));
+        }
+
+        @Test
+        void rejectsRemovingTeamFromCompletedTournament() {
+                tournament.setStatus(TournamentStatus.COMPLETED);
+                TournamentTeam registration = new TournamentTeam();
+                registration.setTournament(tournament);
+                when(tournamentTeamRepository.findById(any(TournamentTeamId.class)))
+                                .thenReturn(Optional.of(registration));
+
+                assertThrows(BusinessException.class, () -> service.removeTeam(20L, 10L));
+
+                verify(tournamentTeamRepository, never()).delete(any());
         }
 }

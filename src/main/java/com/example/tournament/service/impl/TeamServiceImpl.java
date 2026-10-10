@@ -17,6 +17,7 @@ import com.example.tournament.exception.ValidationException;
 import com.example.tournament.mapper.TeamMapper;
 import com.example.tournament.repository.TeamRepository;
 import com.example.tournament.repository.GameRepository;
+import com.example.tournament.repository.TournamentTeamRepository;
 import com.example.tournament.service.TeamService;
 
 @Service
@@ -26,11 +27,14 @@ public class TeamServiceImpl implements TeamService {
     private final TeamRepository teams;
     private final GameRepository games;
     private final TeamMapper mapper;
+    private final TournamentTeamRepository registrations;
 
-    public TeamServiceImpl(TeamRepository teams, GameRepository games, TeamMapper mapper) {
+    public TeamServiceImpl(TeamRepository teams, GameRepository games, TeamMapper mapper,
+            TournamentTeamRepository registrations) {
         this.teams = teams;
         this.games = games;
         this.mapper = mapper;
+        this.registrations = registrations;
     }
 
     @Override
@@ -90,6 +94,9 @@ public class TeamServiceImpl implements TeamService {
     @Override
     public void delete(Long id) {
         Team team = findTeam(id);
+        if (registrations.existsByTeam_Id(id)) {
+            throw new BusinessException("Team has tournament history and cannot be deleted");
+        }
         teams.delete(team);
         teams.flush();
     }

@@ -9,11 +9,14 @@ import com.example.tournament.domain.entity.Team;
 import com.example.tournament.domain.entity.Tournament;
 import com.example.tournament.domain.entity.TournamentTeam;
 import com.example.tournament.domain.entity.TournamentTeamId;
+import com.example.tournament.domain.enums.TournamentStatus;
+import com.example.tournament.exception.BusinessException;
 import com.example.tournament.exception.ResourceNotFoundException;
 import com.example.tournament.repository.TeamRepository;
 import com.example.tournament.repository.TournamentRepository;
 import com.example.tournament.repository.TournamentTeamRepository;
 import com.example.tournament.service.TournamentTeamService;
+import com.example.tournament.service.TournamentRosterSnapshotService;
 import com.example.tournament.service.rule.TeamJoinRuleChain;
 
 @Service
@@ -23,16 +26,19 @@ public class TournamentTeamServiceImpl implements TournamentTeamService {
     private final TournamentRepository tournamentRepository;
     private final TournamentTeamRepository tournamentTeamRepository;
     private final TeamJoinRuleChain teamJoinRuleChain;
+    private final TournamentRosterSnapshotService rosters;
 
     public TournamentTeamServiceImpl(
             TeamRepository teamRepository,
             TournamentRepository tournamentRepository,
             TournamentTeamRepository tournamentTeamRepository,
-            TeamJoinRuleChain teamJoinRuleChain) {
+            TeamJoinRuleChain teamJoinRuleChain,
+            TournamentRosterSnapshotService rosters) {
         this.teamRepository = teamRepository;
         this.tournamentRepository = tournamentRepository;
         this.tournamentTeamRepository = tournamentTeamRepository;
         this.teamJoinRuleChain = teamJoinRuleChain;
+        this.rosters = rosters;
     }
 
     @Override
@@ -54,8 +60,12 @@ public class TournamentTeamServiceImpl implements TournamentTeamService {
         tournamentTeam.setTournament(tournament);
         tournamentTeam.setTeam(team);
         tournamentTeam.setJoinedAt(LocalDateTime.now());
+        tournamentTeam.setTeamName(team.getName());
+        tournamentTeam.setTeamDescription(team.getDescription());
+        tournamentTeam.setTeamLogoUrl(team.getLogoUrl());
 
-        tournamentTeamRepository.save(tournamentTeam);
+        tournamentTeamRepository.saveAndFlush(tournamentTeam);
+        rosters.capturePlayers(tournamentId, teamId);
     }
 
     @Override
@@ -66,6 +76,10 @@ public class TournamentTeamServiceImpl implements TournamentTeamService {
         TournamentTeam tournamentTeam = tournamentTeamRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Team is not registered in this tournament"));
+
+        if (tournamentTeam.getTournament().getStatus() != TournamentStatus.UPCOMING) {
+            throw new BusinessException("Cannot remove a team after the tournament has started");
+        }
 
         tournamentTeamRepository.delete(tournamentTeam);
     }

@@ -89,22 +89,22 @@ class TeamTournamentHistoryBehaviorTests {
     }
 
     @Test
-    void deletingTeamBeforeTournamentStartsRemovesItsRegistration() throws Exception {
+    void deletingRegisteredTeamBeforeTournamentStartsIsRejected() throws Exception {
         Long gameId = rovGameId();
         TeamFixture team = createPreparedTeam(gameId);
         Long tournamentId = createTournament(gameId);
         tournamentTeams.addTeam(tournamentId, team.id());
 
         mvc.perform(delete("/api/v1/teams/{id}", team.id()))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isConflict());
 
-        assertFalse(teams.existsById(team.id()));
-        assertFalse(registrations.existsById(new TournamentTeamId(tournamentId, team.id())));
+        assertTrue(teams.existsById(team.id()));
+        assertTrue(registrations.existsById(new TournamentTeamId(tournamentId, team.id())));
         assertTrue(tournaments.existsById(tournamentId));
     }
 
     @Test
-    void deletingTeamWithOnlyRegistrationsRemovesItFromBothTournaments() throws Exception {
+    void deletingTeamWithTwoCompletedRegistrationsIsRejected() throws Exception {
         Long gameId = rovGameId();
         TeamFixture team = createPreparedTeam(gameId);
         Long firstTournamentId = createTournament(gameId);
@@ -115,14 +115,14 @@ class TeamTournamentHistoryBehaviorTests {
         completeTournament(secondTournamentId);
 
         mvc.perform(delete("/api/v1/teams/{id}", team.id()))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isConflict());
 
-        assertFalse(teams.existsById(team.id()));
-        assertFalse(registrations.existsById(new TournamentTeamId(firstTournamentId, team.id())));
-        assertFalse(registrations.existsById(new TournamentTeamId(secondTournamentId, team.id())));
+        assertTrue(teams.existsById(team.id()));
+        assertTrue(registrations.existsById(new TournamentTeamId(firstTournamentId, team.id())));
+        assertTrue(registrations.existsById(new TournamentTeamId(secondTournamentId, team.id())));
         assertTrue(tournaments.existsById(firstTournamentId));
         assertTrue(tournaments.existsById(secondTournamentId));
-        assertEquals(0, players.countByTeamId(team.id()));
+        assertEquals(5, players.countByTeamId(team.id()));
         assertTrue(players.existsById(team.firstPlayerId()));
     }
 

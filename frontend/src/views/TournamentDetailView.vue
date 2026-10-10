@@ -1,0 +1,275 @@
+<script setup>
+import { computed, ref, watch } from 'vue'
+import { RouterLink } from 'vue-router'
+import AppNavbar from '@/components/AppNavbar.vue'
+import StatusBadge from '@/components/StatusBadge.vue'
+import ParticipantCard from '@/components/ParticipantCard.vue'
+import ResultRow from '@/components/ResultRow.vue'
+import { getTournament, getTournamentMatches } from '@/mock/queries'
+import { formatDateRange, formatTournamentFormat, initials } from '@/utils/format'
+
+const props = defineProps({
+  id: { type: String, required: true },
+})
+
+const RECENT_LIMIT = 5
+
+const tabs = [
+  { key: 'overview', label: 'ภาพรวม' },
+  { key: 'bracket', label: 'สายการแข่ง' },
+  { key: 'matches', label: 'แมตช์ทั้งหมด' },
+]
+const activeTab = ref('overview')
+
+const tournament = computed(() => getTournament(props.id))
+const matches = computed(() => getTournamentMatches(props.id))
+
+const recentResults = computed(() =>
+  matches.value
+    .filter((m) => m.result)
+    .toSorted((a, b) => b.scheduledAt.localeCompare(a.scheduledAt))
+    .slice(0, RECENT_LIMIT),
+)
+
+const infoRows = computed(() => {
+  const t = tournament.value
+  return [
+    { key: 'เกม', value: t.game.name },
+    { key: 'รูปแบบ', value: formatTournamentFormat(t.format, t.totalGames) },
+    { key: 'วันแข่ง', value: formatDateRange(t.startDate, t.endDate) },
+    { key: 'จำนวนทีม', value: `${t.teams.length} ทีม` },
+    ...(t.champion ? [{ key: 'แชมป์', value: t.champion.name, highlight: true }] : []),
+  ]
+})
+
+watch(() => props.id, () => { activeTab.value = 'overview' })
+</script>
+
+<template>
+  <div class="page">
+    <AppNavbar />
+
+    <main v-if="tournament" class="content">
+      <nav class="breadcrumb" aria-label="breadcrumb">
+        <RouterLink to="/tournaments">รายการแข่ง</RouterLink>
+        <span>/</span>
+        <RouterLink :to="{ name: 'tournaments', query: { game: tournament.game.code } }">{{ tournament.game.name }}</RouterLink>
+        <span>/</span>
+        <span class="current" aria-current="page">{{ tournament.name }}</span>
+      </nav>
+
+      <header class="header">
+        <span class="logo">
+          <img v-if="tournament.logoUrl" :src="tournament.logoUrl" :alt="tournament.name" />
+          <template v-else>{{ initials(tournament.name, 3) }}</template>
+        </span>
+        <div class="title">
+          <div class="tags">
+            <span class="game-tag">{{ tournament.game.name }}</span>
+            <StatusBadge :status="tournament.status" large />
+          </div>
+          <h1 class="name">{{ tournament.name }}</h1>
+          <p v-if="tournament.description" class="description">{{ tournament.description }}</p>
+        </div>
+      </header>
+
+      <div class="tabs" role="tablist">
+        <button
+          v-for="tab in tabs"
+          :key="tab.key"
+          type="button"
+          role="tab"
+          class="tab"
+          :class="{ active: activeTab === tab.key }"
+          :aria-selected="activeTab === tab.key"
+          @click="activeTab = tab.key"
+        >{{ tab.label }}</button>
+      </div>
+
+      <div v-if="activeTab === 'overview'" class="columns">
+        <div class="left">
+          <section class="section">
+            <div class="section-header">
+              <h2 class="section-title">ทีมที่เข้าร่วม</h2>
+              <span class="section-meta">{{ tournament.teams.length }} ทีม · กดที่ทีมเพื่อดูผู้เล่น</span>
+            </div>
+            <div v-if="tournament.teams.length" class="participants">
+              <ParticipantCard v-for="team in tournament.teams" :key="team.id" :team="team" />
+            </div>
+            <p v-else class="empty">ยังไม่มีทีมเข้าร่วม</p>
+          </section>
+
+          <section class="section">
+            <div class="section-header">
+              <h2 class="section-title">ผลการแข่งล่าสุด</h2>
+              <button type="button" class="link" @click="activeTab = 'matches'">ดูแมตช์ทั้งหมด →</button>
+            </div>
+            <div v-if="recentResults.length" class="panel">
+              <ResultRow v-for="match in recentResults" :key="match.id" :match="match" />
+            </div>
+            <p v-else class="panel empty">ยังไม่มีผลการแข่ง</p>
+          </section>
+        </div>
+
+        <aside class="infobox">
+          <h2 class="infobox-header">ข้อมูลรายการ</h2>
+          <div v-for="row in infoRows" :key="row.key" class="info-row">
+            <span class="info-key">{{ row.key }}</span>
+            <span class="info-value" :class="{ highlight: row.highlight }">{{ row.value }}</span>
+          </div>
+        </aside>
+      </div>
+
+      <section v-else-if="activeTab === 'matches'" class="section">
+        <div v-if="matches.length" class="panel">
+          <ResultRow v-for="match in matches" :key="match.id" :match="match" />
+        </div>
+        <p v-else class="panel empty">ยังไม่มีแมตช์ในรายการนี้</p>
+      </section>
+
+      <section v-else class="section">
+        <p class="panel empty">สายการแข่งจะแสดงที่นี่</p>
+      </section>
+    </main>
+
+    <main v-else class="content not-found">
+      <h1 class="name">ไม่พบรายการแข่ง</h1>
+      <RouterLink to="/tournaments" class="link">← กลับไปหน้ารายการแข่ง</RouterLink>
+    </main>
+  </div>
+</template>
+
+<style scoped>
+.page { min-height: 100vh; display: flex; flex-direction: column; }
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 40px var(--page-gutter);
+}
+
+.breadcrumb { display: flex; flex-wrap: wrap; gap: 8px; color: var(--color-muted); font-size: 15px; }
+.breadcrumb a:hover { color: var(--color-text); }
+.breadcrumb .current { color: var(--color-text); font-weight: 500; }
+
+.header { display: flex; align-items: center; gap: 28px; }
+.logo {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  width: 120px;
+  height: 120px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  color: var(--color-accent);
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 34px;
+}
+.logo img { width: 100%; height: 100%; object-fit: cover; }
+.title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.tags { display: flex; gap: 8px; }
+.game-tag {
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-2);
+  color: var(--color-muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+.name { font-family: var(--font-heading); font-weight: 600; font-size: 44px; }
+.description { color: var(--color-muted); font-size: 16px; }
+
+.tabs { display: flex; gap: 32px; border-bottom: 1px solid var(--color-border); }
+.tab {
+  padding: 0 0 10px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--color-muted);
+  font-size: 17px;
+  font-weight: 600;
+}
+.tab.active { color: var(--color-accent); border-bottom-color: var(--color-accent); }
+
+.columns { display: flex; align-items: flex-start; gap: 24px; }
+.left { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 24px; }
+
+.section { display: flex; flex-direction: column; gap: 16px; }
+.section-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.section-title { font-family: var(--font-heading); font-weight: 600; font-size: 24px; }
+.section-meta { color: var(--color-muted); font-size: 15px; font-weight: 600; }
+
+.participants {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.panel {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.infobox {
+  width: 440px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+.infobox-header {
+  padding: 16px 24px;
+  background: var(--color-surface-2);
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 18px;
+}
+.info-row {
+  display: flex;
+  gap: 16px;
+  padding: 14px 24px;
+  border-top: 1px solid var(--color-border);
+  font-size: 15px;
+}
+.info-key { width: 120px; flex-shrink: 0; color: var(--color-muted); }
+.info-value { font-weight: 500; }
+.info-value.highlight { color: var(--color-accent); }
+
+.empty {
+  padding: 32px 24px;
+  text-align: center;
+  color: var(--color-muted);
+  font-size: 15px;
+}
+
+.not-found { align-items: flex-start; }
+
+@media (max-width: 1200px) {
+  .columns { flex-direction: column-reverse; align-items: stretch; }
+  .infobox { width: 100%; }
+}
+@media (max-width: 640px) {
+  .header { flex-direction: column; align-items: flex-start; gap: 16px; }
+  .logo { width: 80px; height: 80px; font-size: 24px; border-radius: var(--radius-lg); }
+  .name { font-size: 30px; }
+  .tabs { gap: 20px; overflow-x: auto; }
+  .tab { white-space: nowrap; }
+}
+</style>

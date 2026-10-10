@@ -5,7 +5,7 @@ export const teams = [
   { id: 4, name: 'Thunder Wolves', description: null, gameId: 1, logoUrl: null, createdAt: '2026-09-01T10:00:00' },
   { id: 5, name: 'Nova Vanguard', description: null, gameId: 1, logoUrl: null, createdAt: '2026-09-01T10:00:00' },
   { id: 6, name: 'Titan Tribe', description: null, gameId: 1, logoUrl: null, createdAt: '2026-09-01T10:00:00' },
-  { id: 7, name: 'Fire Fox', description: null, gameId: 1, logoUrl: null, createdAt: '2026-09-01T10:00:00' },
+  { id: 7, name: 'Falcon Five', description: null, gameId: 1, logoUrl: null, createdAt: '2026-09-01T10:00:00' },
   { id: 8, name: 'Kraken Order', description: null, gameId: 1, logoUrl: null, createdAt: '2026-09-01T10:00:00' },
   { id: 9, name: 'Blue Lotus', description: null, gameId: 1, logoUrl: null, createdAt: '2026-09-01T10:00:00' },
   { id: 10, name: 'Golden Spear', description: null, gameId: 1, logoUrl: null, createdAt: '2026-09-01T10:00:00' },

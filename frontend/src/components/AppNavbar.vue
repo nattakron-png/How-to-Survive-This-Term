@@ -1,9 +1,11 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
+
+const isTournamentsActive = computed(() => route.path.startsWith('/tournaments'))
 
 const query = ref(route.query.q ?? '')
 watch(() => route.query.q, (q) => { query.value = q ?? '' })
@@ -23,7 +25,7 @@ function submitSearch() {
 
     <nav class="menu">
       <RouterLink to="/" class="menu-link" exact-active-class="is-active">หน้าแรก</RouterLink>
-      <RouterLink to="/tournaments" class="menu-link" active-class="is-active">รายการแข่ง</RouterLink>
+      <RouterLink to="/tournaments" class="menu-link" :class="{ 'is-active': isTournamentsActive }">รายการแข่ง</RouterLink>
     </nav>
 
     <form class="search" role="search" @submit.prevent="submitSearch">

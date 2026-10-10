@@ -14,7 +14,8 @@ const ALL = 'ALL'
 const route = useRoute()
 const searchQuery = computed(() => String(route.query.q ?? '').trim().toLowerCase())
 
-const selectedGame = ref(ALL)
+const selectedGame = ref(route.query.game ? String(route.query.game) : ALL)
+watch(() => route.query.game, (game) => { selectedGame.value = game ? String(game) : ALL })
 const selectedStatus = ref(ALL)
 const sortBy = ref('date-desc')
 const page = ref(1)

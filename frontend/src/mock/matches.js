@@ -1,11 +1,17 @@
 export const matches = [
-  { id: 1, tournamentId: 1, teamAId: 1, teamBId: 2, roundNumber: 1, matchNumber: 3, nextMatchId: null, scheduledAt: '2026-10-16T19:00:00', status: 'SCHEDULED' },
+  { id: 1, tournamentId: 1, teamAId: 1, teamBId: 2, roundNumber: 1, matchNumber: 4, nextMatchId: 12, scheduledAt: '2026-10-16T19:00:00', status: 'SCHEDULED' },
   { id: 2, tournamentId: 2, teamAId: 14, teamBId: 17, roundNumber: 2, matchNumber: 1, nextMatchId: null, scheduledAt: '2026-10-16T20:00:00', status: 'SCHEDULED' },
   { id: 3, tournamentId: 2, teamAId: 15, teamBId: 16, roundNumber: 2, matchNumber: 2, nextMatchId: null, scheduledAt: '2026-10-16T21:30:00', status: 'SCHEDULED' },
   { id: 4, tournamentId: 7, teamAId: 12, teamBId: 15, roundNumber: 3, matchNumber: 1, nextMatchId: null, scheduledAt: '2026-06-20T19:00:00', status: 'COMPLETED' },
   { id: 5, tournamentId: 8, teamAId: 32, teamBId: 33, roundNumber: 2, matchNumber: 1, nextMatchId: null, scheduledAt: '2026-09-20T20:00:00', status: 'COMPLETED' },
   { id: 6, tournamentId: 10, teamAId: 1, teamBId: 4, roundNumber: 3, matchNumber: 1, nextMatchId: null, scheduledAt: '2026-08-10T19:00:00', status: 'COMPLETED' },
   { id: 7, tournamentId: 14, teamAId: 40, teamBId: 37, roundNumber: 3, matchNumber: 1, nextMatchId: null, scheduledAt: '2026-05-15T20:00:00', status: 'COMPLETED' },
+  { id: 8, tournamentId: 1, teamAId: 3, teamBId: 4, roundNumber: 1, matchNumber: 1, nextMatchId: 11, scheduledAt: '2026-10-14T19:00:00', status: 'COMPLETED' },
+  { id: 9, tournamentId: 1, teamAId: 5, teamBId: 6, roundNumber: 1, matchNumber: 2, nextMatchId: 11, scheduledAt: '2026-10-15T18:00:00', status: 'COMPLETED' },
+  { id: 10, tournamentId: 1, teamAId: 7, teamBId: 11, roundNumber: 1, matchNumber: 3, nextMatchId: 12, scheduledAt: '2026-10-15T20:00:00', status: 'COMPLETED' },
+  { id: 11, tournamentId: 1, teamAId: 3, teamBId: 6, roundNumber: 2, matchNumber: 1, nextMatchId: 13, scheduledAt: '2026-10-18T19:00:00', status: 'SCHEDULED' },
+  { id: 12, tournamentId: 1, teamAId: 7, teamBId: null, roundNumber: 2, matchNumber: 2, nextMatchId: 13, scheduledAt: null, status: 'PENDING' },
+  { id: 13, tournamentId: 1, teamAId: null, teamBId: null, roundNumber: 3, matchNumber: 1, nextMatchId: null, scheduledAt: null, status: 'PENDING' },
 ]
 
 export const matchResults = [
@@ -13,6 +19,9 @@ export const matchResults = [
   { id: 2, matchId: 5, teamAScore: 3, teamBScore: 2, winnerTeamId: 32 },
   { id: 3, matchId: 6, teamAScore: 3, teamBScore: 0, winnerTeamId: 1 },
   { id: 4, matchId: 7, teamAScore: 3, teamBScore: 1, winnerTeamId: 40 },
+  { id: 5, matchId: 8, teamAScore: 2, teamBScore: 0, winnerTeamId: 3 },
+  { id: 6, matchId: 9, teamAScore: 1, teamBScore: 2, winnerTeamId: 6 },
+  { id: 7, matchId: 10, teamAScore: 2, teamBScore: 1, winnerTeamId: 7 },
 ]
 
 export const freeFireGames = [

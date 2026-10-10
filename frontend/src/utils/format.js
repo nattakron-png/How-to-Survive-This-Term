@@ -10,6 +10,11 @@ export function formatDate(iso) {
   return `${d} ${TH_MONTHS[m - 1]} ${y}`
 }
 
+export function formatShortDate(iso) {
+  const { m, d } = parseDate(iso)
+  return `${d} ${TH_MONTHS[m - 1]}`
+}
+
 export function formatDateRange(startIso, endIso) {
   const s = parseDate(startIso)
   const e = parseDate(endIso)

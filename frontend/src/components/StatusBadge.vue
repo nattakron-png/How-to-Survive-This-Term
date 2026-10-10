@@ -3,6 +3,7 @@ import { computed } from 'vue'
 
 const props = defineProps({
   status: { type: String, required: true },
+  large: { type: Boolean, default: false },
 })
 
 const STATUS = {
@@ -15,7 +16,7 @@ const config = computed(() => STATUS[props.status] ?? STATUS.FINISHED)
 </script>
 
 <template>
-  <span class="badge" :class="config.tone">{{ config.label }}</span>
+  <span class="badge" :class="[config.tone, { large }]">{{ config.label }}</span>
 </template>
 
 <style scoped>
@@ -26,6 +27,7 @@ const config = computed(() => STATUS[props.status] ?? STATUS.FINISHED)
   font-weight: 600;
   white-space: nowrap;
 }
+.large { font-size: 14px; }
 .warning { background: var(--color-warning-bg); color: var(--color-warning); }
 .info { background: var(--color-info-bg); color: var(--color-info); }
 .neutral { background: var(--color-neutral-bg); color: var(--color-muted); }

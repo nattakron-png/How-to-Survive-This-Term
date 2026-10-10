@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import TeamLogo from './TeamLogo.vue'
 import StatusBadge from './StatusBadge.vue'
 import { formatDateRange, formatTournamentFormat, initials } from '@/utils/format'
@@ -15,7 +16,7 @@ const logoText = computed(() => initials(props.tournament.name, 3))
 </script>
 
 <template>
-  <article class="card">
+  <RouterLink :to="{ name: 'tournament-detail', params: { id: tournament.id } }" class="card">
     <div class="top">
       <span class="logo">
         <img v-if="tournament.logoUrl" :src="tournament.logoUrl" :alt="tournament.name" />
@@ -40,7 +41,7 @@ const logoText = computed(() => initials(props.tournament.name, 3))
       </div>
       <span class="team-count">{{ tournament.teams.length }} ทีม</span>
     </div>
-  </article>
+  </RouterLink>
 </template>
 
 <style scoped>
@@ -53,7 +54,9 @@ const logoText = computed(() => initials(props.tournament.name, 3))
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
+  transition: border-color 0.15s;
 }
+.card:hover { border-color: var(--color-muted); }
 .top { display: flex; align-items: center; gap: 14px; }
 .logo {
   display: flex;

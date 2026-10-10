@@ -7,6 +7,7 @@
 |---|---|
 | `games.js` | `games` → `Game` |
 | `teams.js` | `teams` → `Team` |
+| `players.js` | `players` → `Player` |
 | `tournaments.js` | `tournaments` → `Tournament`, `tournament_teams` → `TournamentTeam` |
 | `matches.js` | `matches` → `Match`, `match_results` → `MatchResult`, `free_fire_games` → `FreeFireGame` |
 | `freeFireStandings.js` | รูปแบบเดียวกับ `FreeFireStandingsResponse` |

@@ -3,6 +3,7 @@ import { teams } from './teams'
 import { tournaments, tournamentTeams } from './tournaments'
 import { matches, matchResults } from './matches'
 import { freeFireStandings } from './freeFireStandings'
+import { players } from './players'
 
 export const TODAY = '2026-10-16'
 
@@ -65,5 +66,33 @@ export function getMatchesOn(date = TODAY) {
       teamCount: teamsOf(m.tournamentId).length,
       teamA: teamById.get(m.teamAId),
       teamB: teamById.get(m.teamBId),
+    }))
+}
+
+export function getTournament(id) {
+  const tournament = tournamentById.get(Number(id))
+  if (!tournament) return null
+  const view = toTournamentView(tournament)
+  return {
+    ...view,
+    teams: view.teams.map((team) => ({
+      ...team,
+      playerCount: players.filter((p) => p.teamId === team.id).length,
+    })),
+  }
+}
+
+export function getTournamentMatches(tournamentId) {
+  const id = Number(tournamentId)
+  const teamCount = teamsOf(id).length
+  return matches
+    .filter((m) => m.tournamentId === id)
+    .sort((a, b) => a.roundNumber - b.roundNumber || a.matchNumber - b.matchNumber)
+    .map((m) => ({
+      ...m,
+      teamCount,
+      teamA: teamById.get(m.teamAId) ?? null,
+      teamB: teamById.get(m.teamBId) ?? null,
+      result: matchResults.find((r) => r.matchId === m.id) ?? null,
     }))
 }

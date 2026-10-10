@@ -65,6 +65,86 @@
 **เหตุผล:** Controller ของแต่ละงานพึ่งเฉพาะเมธอดที่ต้องใช้; ไม่มีเมธอดสมาชิกหรือโลโก้ยัดอยู่ใน `TeamService` ข้อจำกัดคือ `TeamLogoService` รับ `MultipartFile` จึงยังผูกกับ Spring Web
 
 **Design Patterns/แนวทางที่ใช้ในพาร์ทนี้:** Service Layer, Repository และ DTO/Mapper แยก HTTP–กฎ–ข้อมูล; `FileStorageService` เป็นขอบเขตสำหรับเปลี่ยน storage; V11 เก็บ historical snapshot ต่อทัวร์เพื่อรักษาข้อมูลย้อนหลัง โดย snapshot นี้ไม่ใช่ GoF Memento ส่วน Chain of Responsibility, Strategy และ Observer อยู่ในโมดูล Tournament/Schedule/Result ของสมาชิกอื่น
+
+
+## คนที่ 3: Tournament และ TournamentTeam
+
+### 1. Single Responsibility Principle (SRP) — หลักการรับผิดชอบเพียงอย่างเดียว
+
+โมดูล Tournament และ TournamentTeam มีการแยกหน้าที่การทำงานของแต่ละคลาสให้ชัดเจน โดย `TournamentController` ทำหน้าที่รับ Request และส่ง Response ให้กับผู้ใช้งาน ส่วน `TournamentServiceImpl` รับผิดชอบการจัดการข้อมูลการแข่งขัน เช่น การสร้าง แก้ไข ลบ และตรวจสอบเงื่อนไขของ Tournament
+
+สำหรับ `TournamentTeamServiceImpl` ทำหน้าที่จัดการการนำทีมเข้าร่วมการแข่งขันและการนำทีมออกจากการแข่งขัน ขณะที่คลาสตรวจสอบกฎต่าง ๆ เช่น `TeamExistsRule`, `TeamGameMatchRule` และ `TeamMinimumPlayersRule` รับผิดชอบการตรวจสอบเงื่อนไขแต่ละเรื่องโดยเฉพาะ
+
+การแยกหน้าที่ในลักษณะนี้ช่วยให้โค้ดเป็นระเบียบ แก้ไขและทดสอบได้ง่ายขึ้น โดยไม่ต้องรวมการทำงานทุกอย่างไว้ในคลาสเดียว
+
+### 2. Open/Closed Principle (OCP) — หลักการเปิดให้ขยาย แต่ปิดการแก้ไข
+
+ระบบตรวจสอบเงื่อนไขการสมัครทีมเข้าร่วมการแข่งขันใช้รูปแบบ Chain of Responsibility ผ่าน `TeamJoinRule` และ `TeamJoinRuleChain` โดยแยกกฎการตรวจสอบออกเป็นคลาสย่อย เช่น `TeamExistsRule` สำหรับตรวจสอบว่าทีมมีอยู่จริงหรือไม่, `TeamGameMatchRule` สำหรับตรวจสอบว่าเกมของทีมตรงกับเกมของการแข่งขันหรือไม่ และ `TeamPointsLimitRule` สำหรับตรวจสอบจำนวนทีมสูงสุดของการแข่งขันแบบ POINTS
+
+หากในอนาคตต้องเพิ่มเงื่อนไขใหม่ เช่น กฎการสมัครทีมเพิ่มเติม สามารถสร้างคลาส Rule ใหม่และนำไปเพิ่มใน Chain ได้ โดยไม่จำเป็นต้องนำเงื่อนไขทั้งหมดไปรวมไว้ใน `TournamentTeamServiceImpl`
+
+การออกแบบนี้ช่วยให้ระบบรองรับการเพิ่มกฎใหม่ได้ง่ายขึ้น และลดผลกระทบต่อโค้ดเดิม
+
+### 3. Liskov Substitution Principle (LSP) — หลักการใช้คลาสทดแทนกันได้
+
+ระบบใช้ `TeamJoinRule` เป็น Interface กลางสำหรับกฎการตรวจสอบการสมัครทีม โดยแต่ละคลาส เช่น `TeamExistsRule`, `TournamentExistsRule` และ `TeamMinimumPlayersRule` สามารถทำงานผ่าน Interface เดียวกันได้
+
+`TeamJoinRuleChain` จึงสามารถเรียกใช้กฎแต่ละประเภทผ่านรูปแบบการทำงานร่วมกัน โดยไม่จำเป็นต้องผูกกับรายละเอียดภายในของกฎแต่ละคลาส
+
+การออกแบบนี้สนับสนุนหลักการ LSP เพราะ Rule แต่ละตัวสามารถนำมาใช้ผ่าน Interface กลางได้ ตราบใดที่ยังคงปฏิบัติตามสัญญาการทำงานที่ Interface กำหนดไว้
+
+### 4. Interface Segregation Principle (ISP) — หลักการแยก Interface ตามหน้าที่
+
+ระบบแยก Interface ตามความรับผิดชอบของแต่ละส่วน เช่น `TournamentService` สำหรับการจัดการ Tournament และ `TournamentTeamService` สำหรับการจัดการทีมที่เข้าร่วม Tournament ทำให้การจัดการข้อมูลการแข่งขันและการจัดการสมาชิกของการแข่งขันไม่จำเป็นต้องรวมอยู่ใน Interface เดียวกัน
+
+นอกจากนี้ `TournamentRepository` และ `TournamentTeamRepository` ยังแยกการเข้าถึงข้อมูลตาม Entity ที่รับผิดชอบ
+
+การแยก Interface เช่นนี้ช่วยให้โค้ดมีโครงสร้างชัดเจน ลดการรวมหน้าที่ที่ไม่เกี่ยวข้องกัน และทำให้การพัฒนาและทดสอบแต่ละส่วนทำได้สะดวกขึ้น
+
+### 5. Dependency Inversion Principle (DIP) — หลักการพึ่งพาสิ่งที่เป็นนามธรรม
+
+ระบบใช้ Interface เป็นตัวกลางระหว่างส่วนต่าง ๆ ของแอปพลิเคชัน โดย `TournamentController` เรียกใช้งานผ่าน `TournamentService` และส่วนจัดการทีมใช้ `TournamentTeamService` แทนการนำรายละเอียดการทำงานทั้งหมดมาเขียนไว้ใน Controller โดยตรง
+
+ในส่วนของการตรวจสอบการสมัครทีม ระบบใช้ `TeamJoinRule` เป็น Interface กลาง ทำให้กระบวนการตรวจสอบสามารถทำงานกับ Rule แต่ละประเภทผ่านรูปแบบเดียวกันได้
+
+การใช้ Interface ร่วมกับ Dependency Injection ช่วยลดการผูกติดระหว่างคลาส ทำให้สามารถทดสอบ Service ด้วย Mock และปรับเปลี่ยนหรือเพิ่มส่วนการทำงานได้ง่ายขึ้น
+
+### สรุป
+
+โมดูล Tournament และ TournamentTeam นำหลักการ SOLID มาใช้ในการออกแบบระบบ โดยแยกหน้าที่ของ Controller, Service, Repository และคลาสตรวจสอบกฎออกจากกัน รวมถึงใช้ Interface เพื่อช่วยลดการพึ่งพาระหว่างคลาส และใช้รูปแบบ Chain of Responsibility เพื่อจัดการเงื่อนไขการสมัครทีมอย่างเป็นระบบ ส่งผลให้โค้ดดูแลรักษาง่าย ทดสอบได้สะดวก และรองรับการเพิ่มกฎใหม่ในอนาคต
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## คนที่ 4: โมดูลรูปแบบการแข่ง
 
 ### O: Open/Closed Principle (หลักเด่นของโมดูลนี้)

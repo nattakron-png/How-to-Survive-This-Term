@@ -67,7 +67,7 @@ function pendingStage(item) {
           <p class="updated">อัปเดตล่าสุด {{ formatDate(overview.updatedAt) }}, {{ formatTime(overview.updatedAt) }}</p>
         </div>
         <div class="actions">
-          <button type="button" class="btn btn-outline">+ เพิ่มทีม</button>
+          <RouterLink to="/admin/teams/new" class="btn btn-outline">+ เพิ่มทีม</RouterLink>
           <RouterLink to="/admin/tournaments/new" class="btn btn-accent">+ สร้างรายการแข่ง</RouterLink>
         </div>
       </header>
@@ -84,7 +84,7 @@ function pendingStage(item) {
         <section class="panel pending">
           <header class="panel-head">
             <h2 class="panel-title">แมตช์ที่ต้องกรอกผล</h2>
-            <button type="button" class="link">ดูทั้งหมด →</button>
+            <RouterLink to="/admin/matches" class="link">ดูทั้งหมด →</RouterLink>
           </header>
 
           <ul v-if="pendingResults.length" class="pending-list">
@@ -108,7 +108,7 @@ function pendingStage(item) {
                   {{ formatTime(item.scheduledAt) }}
                 </span>
               </span>
-              <button type="button" class="btn btn-accent btn-sm">กรอกผล</button>
+              <RouterLink :to="item.kind === 'MATCH' ? `/admin/matches?match=${item.id}` : `/admin/tournaments/${item.tournament.id}/games`" class="btn btn-accent btn-sm">กรอกผล</RouterLink>
             </li>
           </ul>
           <p v-else class="empty">ไม่มีแมตช์ที่รอกรอกผล</p>

@@ -34,6 +34,15 @@
   สร้างสาย/ตารางเกมแล้วห้ามเพิ่มหรือลบทีม, ลบรายการได้เฉพาะสถานะ `UPCOMING`, ล้างสายได้เมื่อยังไม่มีผลการแข่ง
 - สร้างสาย: ขนาดสาย = 2 ยกกำลังที่พอดีกับจำนวนทีม จับคู่ seed แบบมาตรฐาน (1 พบอันดับสุดท้าย) ทีม seed ต้นๆ ได้ BYE
   ลำดับ seed ส่งมาตอนสร้างสายเท่านั้น (ตาราง `tournament_teams` ไม่มีคอลัมน์ seed)
+- ทีม: `saveTeam` → `POST /api/v1/teams` หรือ `PUT /api/v1/teams/{id}` ส่งรายชื่อผู้เล่นทั้งหมดของทีมไปพร้อมกัน
+  ผู้เล่นที่ถูก "นำออก" จะถูกตั้ง `teamId = null` (ไม่ได้ลบ) ตรงกับ `players.team_id` ที่เป็น nullable
+- ผู้เล่นที่ยังไม่มีทีมใน mock คือแถวที่ `teamId: null` ใน `players.js`
+- เปลี่ยนเกมของทีมไม่ได้ถ้าเคยลงแข่ง และลบทีมได้เฉพาะทีมที่ยังไม่เคยลงแข่ง
+- กรอกผลแมตช์: `recordMatchResult` → `POST /api/v1/matches/{id}/result` ห้ามเสมอ ผู้ชนะต้องมีคะแนนมากกว่า
+  บันทึกแล้วส่งผู้ชนะเข้าแมตช์ถัดไป (`nextMatchId`) ถ้าเป็นนัดชิงรายการจะเป็น `FINISHED`
+- กรอกผลเกม Free Fire: `recordFreeFireGameResult` → `POST /api/v1/free-fire-games/{id}/results` ต้องครบทุกทีม อันดับไม่ซ้ำ
+  บันทึกเรียงตามลำดับเกม และเมื่อครบทุกเกมรายการจะเป็น `FINISHED`
+- ผู้เล่น: `savePlayer` → `POST /api/v1/players` หรือ `PUT /api/v1/players/{id}` (`teamId` เป็น `null` ได้), `deletePlayer` → `DELETE /api/v1/players/{id}`
 
 ## Login ผู้ดูแล
 - `auth.js` จำลองการ login ตอนเชื่อมจริงให้เปลี่ยนเป็น `POST /api/v1/auth/login`

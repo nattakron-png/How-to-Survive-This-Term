@@ -67,51 +67,80 @@
 **Design Patterns/แนวทางที่ใช้ในพาร์ทนี้:** Service Layer, Repository และ DTO/Mapper แยก HTTP–กฎ–ข้อมูล; `FileStorageService` เป็นขอบเขตสำหรับเปลี่ยน storage; V11 เก็บ historical snapshot ต่อทัวร์เพื่อรักษาข้อมูลย้อนหลัง โดย snapshot นี้ไม่ใช่ GoF Memento ส่วน Chain of Responsibility, Strategy และ Observer อยู่ในโมดูล Tournament/Schedule/Result ของสมาชิกอื่น
 
 
-## คนที่ 3: Tournament และ TournamentTeam
+## คนที่ 3: โมดูล Tournament และ TournamentTeam
 
-### 1. Single Responsibility Principle (SRP) — หลักการรับผิดชอบเพียงอย่างเดียว
+### S: Single Responsibility Principle (หลักเด่นของโมดูลนี้)
 
-โมดูล Tournament และ TournamentTeam มีการแยกหน้าที่การทำงานของแต่ละคลาสให้ชัดเจน โดย `TournamentController` ทำหน้าที่รับ Request และส่ง Response ให้กับผู้ใช้งาน ส่วน `TournamentServiceImpl` รับผิดชอบการจัดการข้อมูลการแข่งขัน เช่น การสร้าง แก้ไข ลบ และตรวจสอบเงื่อนไขของ Tournament
+**หลัก:** คลาสหนึ่งควรมีเหตุผลหลักที่ทำให้ต้องแก้เพียงเรื่องเดียว
 
-สำหรับ `TournamentTeamServiceImpl` ทำหน้าที่จัดการการนำทีมเข้าร่วมการแข่งขันและการนำทีมออกจากการแข่งขัน ขณะที่คลาสตรวจสอบกฎต่าง ๆ เช่น `TeamExistsRule`, `TeamGameMatchRule` และ `TeamMinimumPlayersRule` รับผิดชอบการตรวจสอบเงื่อนไขแต่ละเรื่องโดยเฉพาะ
+| ไฟล์ | สิ่งที่ทำ |
+| --- | --- |
+| `service/impl/TournamentServiceImpl.java` | สร้าง ค้นหา แก้ไข และลบ Tournament พร้อมตรวจสอบกฎของข้อมูลการแข่งขัน |
+| `service/impl/TournamentTeamServiceImpl.java` | เมธอด `addTeam` เพิ่มทีมเข้า Tournament และ `removeTeam` นำทีมออกจาก Tournament |
+| `service/rule/TeamJoinRuleChain.java` | เมธอด `validate` เรียกกฎตรวจสอบการเข้าร่วม Tournament ตามลำดับ |
+| `service/rule/TeamExistsRule.java` | ตรวจสอบว่าทีมที่ต้องการเพิ่มมีอยู่จริง |
+| `service/rule/TeamGameMatchRule.java` | ตรวจสอบว่าเกมของทีมตรงกับเกมของ Tournament |
 
-การแยกหน้าที่ในลักษณะนี้ช่วยให้โค้ดเป็นระเบียบ แก้ไขและทดสอบได้ง่ายขึ้น โดยไม่ต้องรวมการทำงานทุกอย่างไว้ในคลาสเดียว
+**เหตุผล:** การแยกการจัดการ Tournament การเพิ่มและนำทีมออก และกฎตรวจสอบการเข้าร่วมออกจากกัน ทำให้การเปลี่ยนกฎของทีมไม่จำเป็นต้องนำเงื่อนไขทั้งหมดไปเขียนรวมใน `TournamentTeamServiceImpl`
 
-### 2. Open/Closed Principle (OCP) — หลักการเปิดให้ขยาย แต่ปิดการแก้ไข
+### O: Open/Closed Principle
 
-ระบบตรวจสอบเงื่อนไขการสมัครทีมเข้าร่วมการแข่งขันใช้รูปแบบ Chain of Responsibility ผ่าน `TeamJoinRule` และ `TeamJoinRuleChain` โดยแยกกฎการตรวจสอบออกเป็นคลาสย่อย เช่น `TeamExistsRule` สำหรับตรวจสอบว่าทีมมีอยู่จริงหรือไม่, `TeamGameMatchRule` สำหรับตรวจสอบว่าเกมของทีมตรงกับเกมของการแข่งขันหรือไม่ และ `TeamPointsLimitRule` สำหรับตรวจสอบจำนวนทีมสูงสุดของการแข่งขันแบบ POINTS
+**หลัก:** เปิดให้เพิ่มพฤติกรรมใหม่โดยลดการแก้ส่วนที่ใช้งานอยู่
 
-หากในอนาคตต้องเพิ่มเงื่อนไขใหม่ เช่น กฎการสมัครทีมเพิ่มเติม สามารถสร้างคลาส Rule ใหม่และนำไปเพิ่มใน Chain ได้ โดยไม่จำเป็นต้องนำเงื่อนไขทั้งหมดไปรวมไว้ใน `TournamentTeamServiceImpl`
+| ไฟล์ | สิ่งที่ทำ |
+| --- | --- |
+| `service/rule/TeamJoinRule.java` | กำหนด interface กลางสำหรับกฎตรวจสอบการเข้าร่วม Tournament |
+| `service/rule/TeamJoinRuleChain.java` | รวมกฎและเรียกใช้ตามลำดับ |
+| `service/rule/TeamExistsRule.java` | ตรวจสอบว่าทีมมีอยู่จริง |
+| `service/rule/TeamNotAlreadyJoinedRule.java` | ป้องกันการเพิ่มทีมเดิมซ้ำใน Tournament |
+| `service/rule/TeamMinimumPlayersRule.java` | ตรวจสอบจำนวนผู้เล่นขั้นต่ำของทีมตามเกม |
+| `service/rule/TeamPointsLimitRule.java` | จำกัดจำนวนทีมใน Tournament แบบ `POINTS` ไม่ให้เกิน 12 ทีม |
+| `service/rule/TeamTournamentDateRule.java` | ตรวจสอบว่าช่วงเวลาแข่งขันของทีมไม่ทับซ้อนกับ Tournament อื่น |
 
-การออกแบบนี้ช่วยให้ระบบรองรับการเพิ่มกฎใหม่ได้ง่ายขึ้น และลดผลกระทบต่อโค้ดเดิม
+**เหตุผล:** เมื่อเพิ่มกฎตรวจสอบใหม่ สามารถสร้างคลาสที่ implement `TeamJoinRule` แล้วนำไปเชื่อมกับ `TeamJoinRuleChain` ได้ แทนที่จะเพิ่มเงื่อนไขทั้งหมดไว้ใน Service เดียว
 
-### 3. Liskov Substitution Principle (LSP) — หลักการใช้คลาสทดแทนกันได้
+**ข้อจำกัดที่ตรงไปตรงมา:** การเพิ่มกฎใหม่ยังต้องนำกฎเข้า Chain และเขียน Test ให้ครอบคลุม จึงไม่ใช่การเพิ่มคลาสใหม่แล้วระบบจะเรียกใช้งานเองโดยอัตโนมัติ
 
-ระบบใช้ `TeamJoinRule` เป็น Interface กลางสำหรับกฎการตรวจสอบการสมัครทีม โดยแต่ละคลาส เช่น `TeamExistsRule`, `TournamentExistsRule` และ `TeamMinimumPlayersRule` สามารถทำงานผ่าน Interface เดียวกันได้
+### D: Dependency Inversion Principle
 
-`TeamJoinRuleChain` จึงสามารถเรียกใช้กฎแต่ละประเภทผ่านรูปแบบการทำงานร่วมกัน โดยไม่จำเป็นต้องผูกกับรายละเอียดภายในของกฎแต่ละคลาส
+**หลัก:** ส่วนที่ประสานงานควรพึ่งสัญญา มากกว่าผูกกับ implementation ที่เปลี่ยนได้
 
-การออกแบบนี้สนับสนุนหลักการ LSP เพราะ Rule แต่ละตัวสามารถนำมาใช้ผ่าน Interface กลางได้ ตราบใดที่ยังคงปฏิบัติตามสัญญาการทำงานที่ Interface กำหนดไว้
+| ไฟล์ | สิ่งที่ทำ |
+| --- | --- |
+| `controller/api/TournamentController.java` | เรียกใช้ Service สำหรับจัดการ Tournament แทนการเขียนกฎทางธุรกิจไว้ใน Controller |
+| `controller/api/TournamentTeamController.java` | ส่งคำขอเพิ่มหรือนำทีมออกไปให้ Service จัดการ |
+| `service/impl/TournamentTeamServiceImpl.java` | รับ `TeamJoinRuleChain` ผ่าน Dependency Injection และเรียก `validate` ก่อนบันทึกทีม |
+| `service/rule/TeamJoinRule.java` | กำหนดสัญญากลางให้กฎตรวจสอบแต่ละคลาส |
 
-### 4. Interface Segregation Principle (ISP) — หลักการแยก Interface ตามหน้าที่
+**เหตุผล:** การแยก Controller ออกจาก Service และเรียกใช้กฎผ่าน Chain ช่วยให้ทดสอบแต่ละส่วนแยกกันได้ โดยสามารถใช้ mock dependency แทนการเรียกใช้ระบบจริงใน Test
 
-ระบบแยก Interface ตามความรับผิดชอบของแต่ละส่วน เช่น `TournamentService` สำหรับการจัดการ Tournament และ `TournamentTeamService` สำหรับการจัดการทีมที่เข้าร่วม Tournament ทำให้การจัดการข้อมูลการแข่งขันและการจัดการสมาชิกของการแข่งขันไม่จำเป็นต้องรวมอยู่ใน Interface เดียวกัน
+### L: Liskov Substitution Principle
 
-นอกจากนี้ `TournamentRepository` และ `TournamentTeamRepository` ยังแยกการเข้าถึงข้อมูลตาม Entity ที่รับผิดชอบ
+| ไฟล์ | สิ่งที่ทำ |
+| --- | --- |
+| `service/rule/TeamJoinRule.java` | กำหนดสัญญากลางสำหรับกฎตรวจสอบการเข้าร่วม Tournament |
+| `service/rule/TeamExistsRule.java` | implementation สำหรับตรวจสอบการมีอยู่ของทีม |
+| `service/rule/TournamentExistsRule.java` | implementation สำหรับตรวจสอบการมีอยู่ของ Tournament |
+| `service/rule/TournamentStatusRule.java` | implementation สำหรับตรวจสอบสถานะและเงื่อนไขก่อนเพิ่มทีม |
+| `service/rule/TeamGameMatchRule.java` | implementation สำหรับตรวจสอบเกมของทีมกับ Tournament |
 
-การแยก Interface เช่นนี้ช่วยให้โค้ดมีโครงสร้างชัดเจน ลดการรวมหน้าที่ที่ไม่เกี่ยวข้องกัน และทำให้การพัฒนาและทดสอบแต่ละส่วนทำได้สะดวกขึ้น
+**เหตุผล:** กฎตรวจสอบแต่ละคลาสถูกเรียกใช้ผ่าน `TeamJoinRule` ได้ หากทุกคลาสทำตามสัญญาเดียวกัน `TeamJoinRuleChain` ก็สามารถเรียกกฎแต่ละตัวได้โดยไม่จำเป็นต้องรู้รายละเอียดการทำงานภายใน
 
-### 5. Dependency Inversion Principle (DIP) — หลักการพึ่งพาสิ่งที่เป็นนามธรรม
+**ข้อจำกัดที่ตรงไปตรงมา:** การ implement interface เดียวกันยังไม่เพียงพอที่จะพิสูจน์ LSP ต้องทดสอบด้วยว่าแต่ละกฎให้ผลการตรวจสอบและจัดการข้อผิดพลาดตามสัญญาที่กำหนด
 
-ระบบใช้ Interface เป็นตัวกลางระหว่างส่วนต่าง ๆ ของแอปพลิเคชัน โดย `TournamentController` เรียกใช้งานผ่าน `TournamentService` และส่วนจัดการทีมใช้ `TournamentTeamService` แทนการนำรายละเอียดการทำงานทั้งหมดมาเขียนไว้ใน Controller โดยตรง
+### I: Interface Segregation Principle
 
-ในส่วนของการตรวจสอบการสมัครทีม ระบบใช้ `TeamJoinRule` เป็น Interface กลาง ทำให้กระบวนการตรวจสอบสามารถทำงานกับ Rule แต่ละประเภทผ่านรูปแบบเดียวกันได้
+| ไฟล์ | สิ่งที่ทำ |
+| --- | --- |
+| `service/TournamentService.java` | แยกสัญญาการทำงานของ Tournament ออกจากส่วนอื่น |
+| `service/TournamentTeamService.java` | แยกสัญญาการจัดการทีมที่เข้าร่วม Tournament |
+| `repository/TournamentRepository.java` | จัดการการเข้าถึงข้อมูล Tournament |
+| `repository/TournamentTeamRepository.java` | จัดการข้อมูลความสัมพันธ์ระหว่าง Tournament กับทีม |
+| `repository/TournamentPlacementPointRepository.java` | จัดการข้อมูลคะแนนตามอันดับของ Tournament แบบ `POINTS` |
 
-การใช้ Interface ร่วมกับ Dependency Injection ช่วยลดการผูกติดระหว่างคลาส ทำให้สามารถทดสอบ Service ด้วย Mock และปรับเปลี่ยนหรือเพิ่มส่วนการทำงานได้ง่ายขึ้น
+**เหตุผล:** การแยก Service และ Repository ตามหน้าที่ทำให้แต่ละส่วนเรียกใช้ความสามารถที่เกี่ยวข้องกับงานของตัวเอง โดยการจัดการ Tournament การจัดการทีม และการจัดการคะแนนตามอันดับไม่จำเป็นต้องรวมอยู่ใน interface เดียวกัน
 
-### สรุป
-
-โมดูล Tournament และ TournamentTeam นำหลักการ SOLID มาใช้ในการออกแบบระบบ โดยแยกหน้าที่ของ Controller, Service, Repository และคลาสตรวจสอบกฎออกจากกัน รวมถึงใช้ Interface เพื่อช่วยลดการพึ่งพาระหว่างคลาส และใช้รูปแบบ Chain of Responsibility เพื่อจัดการเงื่อนไขการสมัครทีมอย่างเป็นระบบ ส่งผลให้โค้ดดูแลรักษาง่าย ทดสอบได้สะดวก และรองรับการเพิ่มกฎใหม่ในอนาคต
+**Design Patterns/แนวทางที่ใช้ในพาร์ทนี้:** ใช้ Service Layer และ Repository เพื่อแยกกฎทางธุรกิจออกจากการเข้าถึงข้อมูล และใช้ Chain of Responsibility ผ่าน `TeamJoinRule` กับ `TeamJoinRuleChain` เพื่อแยกกฎตรวจสอบการเข้าร่วม Tournament เป็นคลาสย่อย เช่น การตรวจสอบทีม การตรวจสอบเกม จำนวนผู้เล่น จำนวนทีม และช่วงเวลาแข่งขัน นอกจากนี้ Tournament แบบ `POINTS` จะสร้าง Placement Points เริ่มต้นตามอันดับ 1–12 โดยใช้คะแนน `12, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0`
 
 
 

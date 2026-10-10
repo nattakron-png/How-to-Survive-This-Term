@@ -63,4 +63,59 @@
 
 **เหตุผล:** `MatchController` ที่ต้องแค่อ่านแมตช์พึ่ง `MatchService` ที่มีแต่เมธอดอ่าน ไม่ถูกบังคับให้พึ่งเมธอดสร้างตาราง และ Strategy แต่ละตัว implement เมธอดที่ใช้ทั้งหมดจริง ไม่มีเมธอดว่างที่ต้องทิ้งไว้
 
+## คนที่ 5: โมดูลผลการแข่ง
+
+### S: Single Responsibility Principle (หลักเด่นของโมดูลนี้)
+
+**หลัก:** คลาสหนึ่งควรมีเหตุผลให้ต้องแก้เพียงเรื่องเดียว
+
+| ไฟล์ | บรรทัด | สิ่งที่ทำ |
+| --- | --- | --- |
+| `service/impl/MatchResultServiceImpl.java` | 97 | ตรวจกฎและบันทึกผลเสร็จแล้ว แค่ `publishEvent` ออกไป ไม่จัดการสายการแข่งเอง |
+| `event/BracketProgressionListener.java` | 24–25 | รับผิดชอบเรื่องเดียว คือส่งผู้ชนะไปแมตช์ถัดไป หรือจบรายการเมื่อเป็นนัดชิง |
+| `event/FreeFireCompletionListener.java` | 24–25 | รับผิดชอบเรื่องเดียว คือเช็กว่าแข่งครบทุกเกมแล้วหรือยัง |
+| `service/freefire/PointsCalculator.java` | 19, 82–86 | คำนวณคะแนนและเรียงอันดับ (Booyah → Kills → อันดับเกมล่าสุด) โดยไม่ยุ่งกับฐานข้อมูลเลย |
+| `mapper/MatchResultMapper.java` | 12 | แปลง Entity เป็น DTO อย่างเดียว |
+
+**เหตุผล:** ถ้าเกณฑ์คะแนน Free Fire เปลี่ยน จะแก้แค่ `PointsCalculator` ถ้ากติกาการเลื่อนช่องในสายเปลี่ยน จะแก้แค่ `BracketProgressionListener` และ Service บันทึกผลไม่ต้องถูกแก้ในทั้งสองกรณี ผลที่เห็นจริงคือ `PointsCalculatorTest` ทดสอบการตัดสินเสมอได้ครบโดยไม่ต้อง mock repository เลย
+
+### O: Open/Closed Principle
+
+| ไฟล์ | บรรทัด | สิ่งที่ทำ |
+| --- | --- | --- |
+| `service/impl/MatchResultServiceImpl.java` | 31, 97 | พึ่ง `ApplicationEventPublisher` และประกาศ event โดยไม่รู้ว่ามี Listener กี่ตัว |
+| `service/impl/FreeFireResultServiceImpl.java` | 127 | ประกาศ `FreeFireGameRecordedEvent` แบบเดียวกัน |
+
+**เหตุผล:** ถ้าต้องการงานใหม่หลังบันทึกผล เช่น แจ้งเตือนผู้ชม ให้เพิ่มคลาส Listener ใหม่ที่มี `@EventListener` รับ event เดิมได้เลย โดยไม่ต้องแก้ Service (ดูหัวข้อ Observer ใน [design-patterns.md](design-patterns.md))
+
+**ข้อจำกัดที่ตรงไปตรงมา:** ถ้างานใหม่ต้องใช้ข้อมูลที่ยังไม่มีใน event (ตอนนี้ event มีแค่ id) ก็ต้องแก้ record ของ event ด้วย
+
+### D: Dependency Inversion Principle
+
+| ไฟล์ | บรรทัด | สิ่งที่ทำ |
+| --- | --- | --- |
+| `controller/api/MatchResultController.java` | 24–26 | พึ่ง `MatchResultService` (interface) ไม่ใช่ `MatchResultServiceImpl` |
+| `controller/api/FreeFireResultController.java` | 27–29 | พึ่ง `FreeFireResultService` (interface) |
+| `service/impl/MatchResultServiceImpl.java` | 31 | พึ่ง `ApplicationEventPublisher` (interface ของ Spring) ไม่ได้เรียก Listener ตรงๆ |
+
+**เหตุผล:** Service ไม่รู้จัก `BracketProgressionListener` เลย จึงทดสอบ Service แยกได้ `MatchResultServiceImplTest` ส่ง mock ของ `ApplicationEventPublisher` เข้าไปแล้ว `verify(events, never()).publishEvent(any())` ในกรณีที่กฎไม่ผ่าน (บรรทัด 104, 118)
+
+### L: Liskov Substitution Principle
+
+| ไฟล์ | สิ่งที่ทำ |
+| --- | --- |
+| `service/MatchResultService.java` / `service/impl/MatchResultServiceImpl.java` | Implementation ทำตามสัญญาของ interface ครบ ทั้งค่าที่คืนและ Exception ที่โยน (404, 409, 400) |
+| `service/FreeFireResultService.java` / `service/impl/FreeFireResultServiceImpl.java` | ทุก method โยน `ResourceNotFoundException` เมื่อไม่พบข้อมูล และ `BusinessException` เมื่อรายการไม่ใช่แบบเก็บคะแนน เหมือนกันทุกตัว |
+
+**เหตุผล:** Controller เรียกผ่าน interface และ `GlobalExceptionHandler` แปลง Exception เป็น HTTP status ได้ถูกต้องเสมอ ถ้าเปลี่ยนไปใช้ implementation อื่นที่ทำตามสัญญาเดียวกัน Controller ก็ไม่ต้องแก้
+
+### I: Interface Segregation Principle
+
+| ไฟล์ | สิ่งที่ทำ |
+| --- | --- |
+| `service/MatchResultService.java` | มีแค่ 2 method (`record`, `get`) สำหรับผลแบบแพ้คัดออก |
+| `service/FreeFireResultService.java` | แยกเป็น interface ของแบบเก็บคะแนนโดยเฉพาะ (`record`, `getResults`, `standings`, `listGames`) |
+
+**เหตุผล:** แยก interface ตามรูปแบบการแข่ง ทำให้ `MatchResultController` ไม่ต้องพึ่ง method ของ Free Fire ที่ไม่ได้ใช้ และกลับกันด้วย
+
 

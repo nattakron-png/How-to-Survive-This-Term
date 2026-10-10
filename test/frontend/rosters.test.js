@@ -1,9 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { players } from '../src/mock/players.js'
-import { tournamentTeams } from '../src/mock/tournaments.js'
-import { captureRoster, getRegisteredPlayers } from '../src/mock/rosters.js'
+import { players } from '../../code/frontend/src/mock/players.js'
+import { tournamentTeams } from '../../code/frontend/src/mock/tournaments.js'
+import { captureRoster, getRegisteredPlayers } from '../../code/frontend/src/mock/rosters.js'
 
 test('old tournament keeps its player after live roster changes; new tournament sees the new roster', () => {
   const registration = tournamentTeams[0]

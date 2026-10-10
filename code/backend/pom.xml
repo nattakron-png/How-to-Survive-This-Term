@@ -103,6 +103,8 @@
 	</dependencies>
 
 	<build>
+		<!-- ใบงานกำหนดให้เทสอยู่ในโฟลเดอร์ test/ ที่ root ของ repo -->
+		<testSourceDirectory>${project.basedir}/../../test/backend/java</testSourceDirectory>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>

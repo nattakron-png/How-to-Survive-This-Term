@@ -294,7 +294,7 @@ public class SingleEliminationStrategy implements FormatStrategy {
 
 ### Commit 5: Test ของ Strategy
 
-`src/test/java/com/example/tournament/service/format/SingleEliminationStrategyTest.java`
+`test/backend/java/com/example/tournament/service/format/SingleEliminationStrategyTest.java`
 
 ```java
 package com.example.tournament.service.format;
@@ -534,7 +534,7 @@ public class ScheduleServiceImpl implements ScheduleService {
 
 ### Commit 8: Test ของ ScheduleService
 
-`src/test/java/com/example/tournament/service/impl/ScheduleServiceImplTest.java`
+`test/backend/java/com/example/tournament/service/impl/ScheduleServiceImplTest.java`
 
 ```java
 package com.example.tournament.service.impl;

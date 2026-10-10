@@ -1,8 +1,10 @@
+# build context คือ root ของ repo (ดู compose.yaml และ railway.json)
 FROM maven:3.9-eclipse-temurin-21 AS development
-WORKDIR /workspace
-COPY pom.xml .
+WORKDIR /workspace/code/backend
+COPY code/backend/pom.xml .
 RUN mvn -B dependency:go-offline
-COPY src ./src
+COPY code/backend/src ./src
+COPY test/backend /workspace/test/backend
 CMD ["mvn", "-B", "spring-boot:run"]
 
 FROM development AS build
@@ -17,7 +19,7 @@ RUN apt-get update \
     && mkdir -p /app/uploads/logos \
     && chown -R app:app /app/uploads
 WORKDIR /app
-COPY --from=build /workspace/target/tournament-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=build /workspace/code/backend/target/tournament-0.0.1-SNAPSHOT.jar app.jar
 USER app
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]

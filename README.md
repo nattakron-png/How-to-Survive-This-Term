@@ -5,17 +5,17 @@
 ผู้ชมเข้าดูรายการ สายแข่ง ตารางคะแนน และผลการแข่งได้โดยไม่ต้องเข้าสู่ระบบ
 รายการแข่งมี 2 รูปแบบ คือ **แพ้คัดออก (Single Elimination)** และ **เก็บคะแนนหลายเกม (Points)** สำหรับ Free Fire
 
-> **สถานะ:** Backend ทำ API หลักเสร็จแล้ว ได้แก่ รายการแข่ง ทีม ผู้เล่น ตารางแข่ง ผลแข่ง และตารางคะแนน แต่ยังไม่มีระบบยืนยันตัวตน (Spring Security) และยังไม่มี endpoint สำหรับเพิ่มทีมเข้ารายการ หน้าผู้ชมเรียก API จริงแล้ว ส่วนหน้าหลังบ้านยังใช้ข้อมูลจำลอง ดูงานที่เหลือได้ใน [REMAINING-WORK.md](doc/REMAINING-WORK.md)
+> **สถานะ:** Backend ทำ API หลักเสร็จแล้ว ได้แก่ รายการแข่ง ทีม ผู้เล่น ตารางแข่ง ผลแข่ง และตารางคะแนน แต่ยังไม่มีระบบยืนยันตัวตน (Spring Security) หน้าผู้ชมและหน้าหลังบ้านเรียก API จริงแล้ว ยกเว้นการ login ของผู้ดูแลที่ยังเป็นข้อมูลจำลอง ดูงานที่เหลือได้ใน [REMAINING-WORK.md](doc/REMAINING-WORK.md)
 
 ## สมาชิกกลุ่ม
 
 | ลำดับ | ชื่อ-นามสกุล | รหัสนักศึกษา | Section | Branch | หน้าที่รับผิดชอบ |
 | ---: | --- | --- | --- | --- | --- |
-| 1 | นายคณิศร มาประจักษ์ | 673380031-3 | 2 | `<branch>` | ฐานข้อมูล, Entity, Auth |
-| 2 | นายนฤเศรษฐ์ อภิลักขิตพงศ์ | 673380044-4 | 2 | `<branch>` | `<โมดูล>` |
-| 3 | นายสิรภัทร ลีล้าน | 673380067-2 | 2 | `<branch>` | `<โมดูล>` |
-| 4 | นายณัฐกร รุ่งฟ้า | 673380512-7 | 2 | `<branch>` | ผลการแข่ง, ตารางคะแนน Free Fire, CI |
-| 5 | นายวัชรพล ดวงกองเงิน | 673380290-9 | 2 | `<branch>` | Team / Player API, Docker, Deploy |
+| 1 | นายคณิศร มาประจักษ์ | 673380031-3 | 2 | `Kanisorn-maprajuk_6733800313_02` | ฐานข้อมูล, Entity, Auth |
+| 2 | นายนฤเศรษฐ์ อภิลักขิตพงศ์ | 673380044-4 | 2 | `Naruset-Apilukkitapong-6733800444_02` | `<โมดูล>` |
+| 3 | นายสิรภัทร ลีล้าน | 673380067-2 | 2 | `Siraphat-leelan_6733800672_02` | `<โมดูล>` |
+| 4 | นายณัฐกร รุ่งฟ้า | 673380512-7 | 2 | `Nattakron-rungfa_6733805127_02` | ผลการแข่ง (แพ้คัดออก + Free Fire), ตารางคะแนน, Observer Pattern, CI, เชื่อมหน้าหลังบ้านกับ API |
+| 5 | นายวัชรพล ดวงกองเงิน | 673380290-9 | 2 | `Vacharapoln-Doungkongngern_6733802909_02` | Team / Player API, Docker, Deploy |
 
 ## Tech Stack
 
@@ -23,7 +23,7 @@
 | --- | --- |
 | Backend | Java 21, Spring Boot 4.1.1, Spring Web MVC, Bean Validation |
 | ORM และ Build | Spring Data JPA / Hibernate, Maven Wrapper |
-| Database | PostgreSQL 17, Flyway (migration V1–V11) |
+| Database | PostgreSQL 17, Flyway (migration V1–V12) |
 | Frontend | Vue 3, Vue Router 4, Vite 6 |
 | API Documentation | springdoc-openapi 3.1.1 (Swagger UI) |
 | Testing | JUnit 5, Mockito, Spring Boot Test, Node.js test runner |
@@ -32,7 +32,7 @@
 
 ## System Architecture
 
-Backend แบ่งเป็นชั้นตามแพ็กเกจใน `src/main/java/com/example/tournament/`
+Backend แบ่งเป็นชั้นตามแพ็กเกจใน `code/backend/src/main/java/com/example/tournament/`
 
 ```text
 Vue (Browser) ──HTTP /api/v1──▶ Controller ─▶ Service ─▶ Repository ─▶ PostgreSQL
@@ -67,7 +67,7 @@ Vue (Browser) ──HTTP /api/v1──▶ Controller ─▶ Service ─▶ Repos
 | `matches` → `matches` (`next_match_id`) | ผูกสายแพ้คัดออก ผู้ชนะจะถูกส่งไปแมตช์ถัดไป |
 | `free_fire_games` 1:N `free_fire_game_results` | ผลอันดับและจำนวน kill ของทุกทีมในแต่ละเกม |
 
-ระบบไม่เก็บคะแนน Free Fire ลงฐานข้อมูล แต่คำนวณใหม่จากอันดับและจำนวน kill ทุกครั้งที่เรียกดู รายละเอียดอยู่ใน [ER Diagram](doc/diagrams/er-diagram.md), [Data Dictionary](doc/data-dictionary.md) และ [db/migration](src/main/resources/db/migration/)
+ระบบไม่เก็บคะแนน Free Fire ลงฐานข้อมูล แต่คำนวณใหม่จากอันดับและจำนวน kill ทุกครั้งที่เรียกดู รายละเอียดอยู่ใน [ER Diagram](doc/diagrams/er-diagram.md), [Data Dictionary](doc/data-dictionary.md) และ [db/migration](code/backend/src/main/resources/db/migration/)
 
 ## Installation & Setup
 
@@ -109,7 +109,7 @@ docker compose up -d --build --wait
 **Frontend** (เปิดอีก terminal)
 
 ```bash
-cd frontend
+cd code/frontend
 npm install
 npm run dev
 ```
@@ -118,7 +118,7 @@ npm run dev
 
 ### ข้อมูลตัวอย่าง
 
-ถ้าต้องการให้ฐานข้อมูลในเครื่องมีรายการ ทีม แมตช์ และผล Free Fire ไว้ทดลอง ให้ใช้สคริปต์ใน [scripts/](scripts/README.md) สคริปต์นี้แปลงข้อมูลใน `frontend/src/mock/` เป็นไฟล์ SQL ใช้ได้กับฐานข้อมูลในเครื่องเท่านั้น และไม่ถูกส่งขึ้น Railway
+ถ้าต้องการให้ฐานข้อมูลในเครื่องมีรายการ ทีม แมตช์ และผล Free Fire ไว้ทดลอง ให้ใช้สคริปต์ใน [code/scripts/](code/scripts/README.md) สคริปต์นี้แปลงข้อมูลใน `code/frontend/src/mock/` เป็นไฟล์ SQL ใช้ได้กับฐานข้อมูลในเครื่องเท่านั้น และไม่ถูกส่งขึ้น Railway
 
 ## API Documentation
 
@@ -127,7 +127,7 @@ npm run dev
 | ส่วน | Endpoint หลัก |
 | --- | --- |
 | Tournaments | `GET/POST /tournaments`, `GET/PUT/DELETE /tournaments/{id}`, `GET /tournaments/{id}/placement-points` |
-| Tournament Teams | `GET /tournaments/{id}/teams`, `GET /tournaments/{id}/teams/{teamId}/roster` |
+| Tournament Teams | `GET/POST /tournaments/{id}/teams`, `DELETE /tournaments/{id}/teams/{teamId}`, `GET /tournaments/{id}/teams/{teamId}/roster` |
 | Teams | `GET/POST /teams`, `GET/PUT/DELETE /teams/{id}`, `PUT /teams/{id}/logo` |
 | Players | `GET/POST /players`, `GET/PUT/DELETE /players/{id}`, `GET /teams/{id}/players`, `PUT/DELETE /teams/{id}/players/{playerId}` |
 | Schedule และ Matches | `POST /tournaments/{id}/schedule`, `GET /tournaments/{id}/matches`, `GET /matches`, `GET /matches/{id}` |
@@ -149,17 +149,17 @@ npm run dev
 docker compose --profile test run --rm tests
 ```
 
-ถ้าลง JDK 21 แล้ว และมี PostgreSQL สำหรับเทสต์ ก็รันตรงได้ด้วย `./mvnw verify` (บน Windows ใช้ `.\mvnw.cmd verify`) ผลเทสต์อยู่ใน `target/surefire-reports/`
+ถ้าลง JDK 21 แล้ว และมี PostgreSQL สำหรับเทสต์ ก็รันตรงได้ด้วย `./mvnw verify` ในโฟลเดอร์ `code/backend` (บน Windows ใช้ `.\mvnw.cmd verify`) โค้ดเทสต์อยู่ใน `test/backend/java/` และผลเทสต์อยู่ใน `code/backend/target/surefire-reports/`
 
 **Frontend**
 
 ```bash
-cd frontend
-node --test test/
+cd code/frontend
+node --test ../../test/frontend/*.test.js
 npm run build
 ```
 
-**CI:** GitHub Actions รัน `./mvnw -B verify` กับ PostgreSQL 17 ทุกครั้งที่ push หรือเปิด PR เข้า `develop` / `main` และเก็บรายงานเทสต์ไว้เป็น artifact ชื่อ `test-reports`
+**CI:** GitHub Actions มี 2 job คือ backend รัน `./mvnw -B verify` กับ PostgreSQL 17 และ frontend รัน `npm run build` กับเทสต์ใน `test/frontend/` ทุกครั้งที่ push หรือเปิด PR เข้า `develop` / `main` และเก็บรายงานเทสต์ไว้เป็น artifact ชื่อ `test-reports`
 
 ## Deployment URL
 
@@ -170,7 +170,7 @@ npm run build
 | Swagger UI | `<URL>/swagger-ui.html` |
 | Frontend | ยังไม่ได้ deploy |
 
-- **Backend:** Railway build จาก `Dockerfile` ที่ root และต่อกับ Railway PostgreSQL ผ่าน private network
+- **Backend:** Railway build จาก `code/backend/Dockerfile` (กำหนดใน `railway.json`) และต่อกับ Railway PostgreSQL ผ่าน private network
 - **ตัวแปรฐานข้อมูล:** ตั้ง `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD` เป็น Reference Variable ไปที่ service Postgres
 - **Healthcheck Path:** ตั้งเป็น `/actuator/health`
 - **ที่ deploy แล้ว:** Backend รุ่น migration V10 เท่านั้น ยังไม่ได้ deploy V11 และ Frontend
@@ -180,34 +180,41 @@ npm run build
 
 ## Project Structure
 
+โครงสร้างตามใบงานข้อ 9: `code/`, `test/`, `doc/`, `img/`
+
 ```text
 How-to-Survive-This-Term/
-├── .github/workflows/ci.yml      # Build + test ทุก PR
-├── src/
-│   ├── main/java/com/example/tournament/
-│   │   ├── controller/api/       # REST endpoints
-│   │   ├── service/              # Interface + business logic
-│   │   │   ├── impl/
-│   │   │   ├── format/           # Strategy: แพ้คัดออก / เก็บคะแนน
-│   │   │   ├── rule/             # Chain of Responsibility: กฎเพิ่มทีม
-│   │   │   ├── freefire/         # คำนวณคะแนน Free Fire
-│   │   │   └── storage/          # เก็บไฟล์โลโก้
-│   │   ├── event/                # Observer: Listener หลังบันทึกผล
-│   │   ├── repository/           # Spring Data JPA
-│   │   ├── domain/entity, enums/
-│   │   ├── dto/request, response/
-│   │   ├── mapper/
-│   │   └── exception/            # GlobalExceptionHandler, ApiError
-│   ├── main/resources/db/migration/   # Flyway V1–V11
-│   └── test/                     # Unit + Integration tests
-├── frontend/                     # Vue 3 + Vite
-│   └── src/ views/, components/, api/, mock/, router/, stores/
-├── doc/                          # เอกสารโมดูล, design patterns, SOLID
-│   └── diagrams/                 # Mermaid diagrams ทั้งหมด
-├── scripts/                      # สร้างข้อมูลตัวอย่างสำหรับ local
-├── Dockerfile
-├── compose.yaml
-├── pom.xml
+├── code/                              # Source code + Configuration
+│   ├── backend/                       # Spring Boot (pom.xml, mvnw, Dockerfile)
+│   │   └── src/main/
+│   │       ├── java/com/example/tournament/
+│   │       │   ├── controller/api/    # REST endpoints
+│   │       │   ├── service/           # Interface + business logic
+│   │       │   │   ├── impl/
+│   │       │   │   ├── format/        # Strategy: แพ้คัดออก / เก็บคะแนน
+│   │       │   │   ├── rule/          # Chain of Responsibility: กฎเพิ่มทีม
+│   │       │   │   ├── freefire/      # คำนวณคะแนน Free Fire
+│   │       │   │   └── storage/       # เก็บไฟล์โลโก้
+│   │       │   ├── event/             # Observer: Listener หลังบันทึกผล
+│   │       │   ├── repository/        # Spring Data JPA
+│   │       │   ├── domain/entity, enums/
+│   │       │   ├── dto/request, response/
+│   │       │   ├── mapper/
+│   │       │   └── exception/         # GlobalExceptionHandler, ApiError
+│   │       └── resources/db/migration/  # Flyway V1–V12
+│   ├── frontend/                      # Vue 3 + Vite
+│   │   └── src/ views/, components/, api/, mock/, router/, stores/
+│   └── scripts/                       # สร้างข้อมูลตัวอย่างสำหรับ local
+├── test/                              # การทดสอบทั้งหมด
+│   ├── backend/java/                  # Unit + Integration tests (JUnit, Mockito, Spring Boot Test)
+│   └── frontend/                      # node:test
+├── doc/                               # เอกสารโมดูล, design patterns, SOLID
+│   ├── diagrams/                      # Diagram ทั้งหมด
+│   └── slide/                         # สไลด์นำเสนอ
+├── img/                               # ไฟล์มัลติมีเดีย
+├── .github/workflows/ci.yml           # Build + test ทุก PR
+├── compose.yaml                       # Docker Compose (db, app, tests)
+├── railway.json                       # ตั้งค่า deploy บน Railway
 └── README.md
 ```
 

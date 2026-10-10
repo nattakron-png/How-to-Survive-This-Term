@@ -1,6 +1,6 @@
 # ER Diagram: ฐานข้อมูลระบบจัดการสายแข่ง
 
-โครงสร้างตารางหลังรัน Flyway migration `V1`–`V11` (PostgreSQL 17) ชื่อตารางและคอลัมน์ตรงกับไฟล์ใน `src/main/resources/db/migration/`
+โครงสร้างตารางหลังรัน Flyway migration `V1`–`V11` (PostgreSQL 17) ชื่อตารางและคอลัมน์ตรงกับไฟล์ใน `code/backend/src/main/resources/db/migration/`
 
 ```mermaid
 erDiagram

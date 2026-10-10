@@ -464,3 +464,48 @@ export async function deleteTeam(id) {
   })
   removeWhere(teams, (t) => t.id === team.id)
 }
+
+export function getAdminPlayers() {
+  return players.map((p) => {
+    const team = p.teamId == null ? null : teams.find((t) => t.id === p.teamId) ?? null
+    return { ...p, team, game: team ? gameOf(team.gameId) : null }
+  })
+}
+
+function validatePlayer(payload) {
+  const errors = {}
+  const name = payload.name?.trim() ?? ''
+  const role = payload.role?.trim() ?? ''
+  if (!name) errors.name = 'กรุณากรอกชื่อผู้เล่น'
+  else if (name.length > 150) errors.name = 'ชื่อยาวเกิน 150 ตัวอักษร'
+  if (!role) errors.role = 'กรุณากรอกตำแหน่ง'
+  else if (role.length > 100) errors.role = 'ตำแหน่งยาวเกิน 100 ตัวอักษร'
+  if (payload.teamId != null && !teams.some((t) => t.id === Number(payload.teamId))) errors.teamId = 'ไม่พบทีมนี้'
+  return errors
+}
+
+export async function savePlayer(id, payload) {
+  await delay()
+  const errors = validatePlayer(payload)
+  if (Object.keys(errors).length) throw new ValidationError(errors)
+  const data = {
+    name: payload.name.trim(),
+    role: payload.role.trim(),
+    description: payload.description?.trim() || null,
+    teamId: payload.teamId == null ? null : Number(payload.teamId),
+  }
+  if (id == null) {
+    const row = { id: nextId(players), ...data }
+    players.push(row)
+    return row
+  }
+  const player = players.find((p) => p.id === Number(id))
+  if (!player) throw new Error('NOT_FOUND')
+  Object.assign(player, data)
+  return player
+}
+
+export async function deletePlayer(id) {
+  await delay()
+  removeWhere(players, (p) => p.id === Number(id))
+}

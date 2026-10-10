@@ -12,7 +12,7 @@ const menu = [
   { key: 'overview', label: 'ภาพรวม', icon: '◧', to: '/admin', exact: true },
   { key: 'tournaments', label: 'รายการแข่ง', icon: '☰', to: '/admin/tournaments' },
   { key: 'teams', label: 'ทีม', icon: '◉', to: '/admin/teams' },
-  { key: 'players', label: 'ผู้เล่น', icon: '◎', to: null },
+  { key: 'players', label: 'ผู้เล่น', icon: '◎', to: '/admin/players' },
   { key: 'matches', label: 'แมตช์และผลการแข่ง', icon: '⚑', to: null },
 ]
 

@@ -38,6 +38,7 @@
   ผู้เล่นที่ถูก "นำออก" จะถูกตั้ง `teamId = null` (ไม่ได้ลบ) ตรงกับ `players.team_id` ที่เป็น nullable
 - ผู้เล่นที่ยังไม่มีทีมใน mock คือแถวที่ `teamId: null` ใน `players.js`
 - เปลี่ยนเกมของทีมไม่ได้ถ้าเคยลงแข่ง และลบทีมได้เฉพาะทีมที่ยังไม่เคยลงแข่ง
+- ผู้เล่น: `savePlayer` → `POST /api/v1/players` หรือ `PUT /api/v1/players/{id}` (`teamId` เป็น `null` ได้), `deletePlayer` → `DELETE /api/v1/players/{id}`
 
 ## Login ผู้ดูแล
 - `auth.js` จำลองการ login ตอนเชื่อมจริงให้เปลี่ยนเป็น `POST /api/v1/auth/login`

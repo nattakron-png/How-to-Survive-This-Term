@@ -44,11 +44,13 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
+          cache-dependency-path: code/backend/pom.xml
 
       - name: Make Maven Wrapper executable
-        run: chmod +x mvnw
+        run: chmod +x code/backend/mvnw
 
       - name: Build and test
+        working-directory: code/backend
         run: ./mvnw -B verify
 
       - name: Upload test reports
@@ -56,4 +58,30 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
-          path: target/surefire-reports/
+          path: code/backend/target/surefire-reports/
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: code/frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: code/frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit test
+        run: node --test ../../test/frontend/*.test.js

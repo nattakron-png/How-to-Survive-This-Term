@@ -1,6 +1,6 @@
 # Mock data
 
-ข้อมูลตัวอย่างที่จัดรูปแบบให้ตรงกับ **Entity / ตารางในฐานข้อมูลจริง** (ดู `src/main/resources/db/migration`)
+ข้อมูลตัวอย่างที่จัดรูปแบบให้ตรงกับ **Entity / ตารางในฐานข้อมูลจริง** (ดู `code/backend/src/main/resources/db/migration`)
 ชื่อ field เป็น camelCase แบบเดียวกับ Entity และ DTO ฝั่ง Spring Boot เช่น `start_date` → `startDate`
 
 | ไฟล์ | ตรงกับตาราง / Entity |

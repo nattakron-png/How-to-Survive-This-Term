@@ -4,7 +4,7 @@
 .DS_Store
 HELP.md
 target/
-/uploads/
+uploads/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
@@ -36,3 +36,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Frontend ###
+node_modules/
+code/frontend/dist/

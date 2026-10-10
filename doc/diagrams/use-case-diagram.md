@@ -93,6 +93,6 @@ flowchart LR
 
 ## สิ่งที่ยังไม่ครบตามแผนภาพ
 
-- **UC10 เข้าสู่ระบบ:** backend ยังไม่มี Spring Security หน้าเข้าสู่ระบบตรวจรหัสจาก mock ใน `frontend/src/mock/auth.js` และ API ที่เขียนข้อมูลยังเรียกได้โดยไม่ต้องเข้าสู่ระบบ
+- **UC10 เข้าสู่ระบบ:** backend ยังไม่มี Spring Security หน้าเข้าสู่ระบบตรวจรหัสจาก mock ใน `code/frontend/src/mock/auth.js` และ API ที่เขียนข้อมูลยังเรียกได้โดยไม่ต้องเข้าสู่ระบบ
 - **UC16 เพิ่ม / ถอนทีมในรายการ:** มี `TournamentTeamServiceImpl` พร้อมเทสต์แล้ว แต่ยังไม่มี endpoint `POST` / `DELETE` ใน Controller
-- หน้าหลังบ้านใน frontend ยังใช้ข้อมูลจาก `frontend/src/mock/` ส่วนหน้าผู้ชมเรียก API จริง
+- หน้าหลังบ้านใน frontend ยังใช้ข้อมูลจาก `code/frontend/src/mock/` ส่วนหน้าผู้ชมเรียก API จริง

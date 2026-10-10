@@ -7,7 +7,7 @@ Railway Trial ปัจจุบันให้เครดิตเริ่ม
 ## สร้างบริการ
 
 1. สร้าง Railway Project และเพิ่ม `PostgreSQL` จาก `+ New` → `Database` → `PostgreSQL`. ให้ DB อยู่ใน private network; ไม่ต้องเปิด Public Access เพื่อให้แอปใน project เดียวกันเชื่อมต่อ ([Railway PostgreSQL](https://docs.railway.com/databases/postgresql))
-2. เพิ่ม service แอปจาก GitHub repo นี้ เลือก branch ที่ทีมจะ deploy และตรวจ build log ว่า Railway ใช้ `Dockerfile` ที่ root. `Dockerfile` ปัจจุบัน build ด้วย Maven/Java 21 แล้วรัน JAR ใต้ user `app` ([Railway Dockerfiles](https://docs.railway.com/builds/dockerfiles))
+2. เพิ่ม service แอปจาก GitHub repo นี้ เลือก branch ที่ทีมจะ deploy และตรวจ build log ว่า Railway ใช้ `code/backend/Dockerfile` (กำหนดไว้ใน `railway.json` ที่ root และ build context คือ root ของ repo). `Dockerfile` ปัจจุบัน build ด้วย Maven/Java 21 แล้วรัน JAR ใต้ user `app` ([Railway Dockerfiles](https://docs.railway.com/builds/dockerfiles))
 3. ใน service แอป ตั้ง Variables ด้านล่างโดยใช้ **Reference Variable** ไปยัง service PostgreSQL (ตัวอย่างชื่อ service คือ `Postgres`; ถ้าตั้งชื่ออื่น ให้เปลี่ยนส่วนหน้าจุดตามชื่อจริง) ([Railway Variables](https://docs.railway.com/variables)):
 
    | ตัวแปรของแอป | ค่าใน Railway |

@@ -427,6 +427,11 @@ const gameStatusLabel = { COMPLETED: 'จบแล้ว', SCHEDULED: 'รอแ
             </div>
 
             <RouterLink
+              v-if="tournament.status !== 'FINISHED'"
+              :to="isPoints ? `/admin/tournaments/${tournament.id}/games` : '/admin/matches'"
+              class="admin-btn admin-btn-accent admin-btn-block"
+            >{{ isPoints ? 'กรอกผลเกม' : 'กรอกผลแมตช์' }}</RouterLink>
+            <RouterLink
               :to="`/tournaments/${tournament.id}?tab=${isPoints ? 'games' : 'bracket'}`"
               class="admin-btn admin-btn-outline admin-btn-block"
             >{{ isPoints ? 'ดูตารางเกมในหน้าผู้ชม' : 'ดูสายการแข่งในหน้าผู้ชม' }}</RouterLink>

@@ -11,6 +11,8 @@ import AdminTournamentTeamsView from '@/views/admin/AdminTournamentTeamsView.vue
 import AdminTeamsView from '@/views/admin/AdminTeamsView.vue'
 import AdminTeamFormView from '@/views/admin/AdminTeamFormView.vue'
 import AdminPlayersView from '@/views/admin/AdminPlayersView.vue'
+import AdminMatchesView from '@/views/admin/AdminMatchesView.vue'
+import AdminFreeFireResultsView from '@/views/admin/AdminFreeFireResultsView.vue'
 import { useAuth } from '@/stores/auth'
 
 const routes = [
@@ -28,6 +30,8 @@ const routes = [
   { path: '/admin/teams/new', name: 'admin-team-new', component: AdminTeamFormView, meta: { requiresAdmin: true } },
   { path: '/admin/teams/:id/edit', name: 'admin-team-edit', component: AdminTeamFormView, props: true, meta: { requiresAdmin: true } },
   { path: '/admin/players', name: 'admin-players', component: AdminPlayersView, meta: { requiresAdmin: true } },
+  { path: '/admin/matches', name: 'admin-matches', component: AdminMatchesView, meta: { requiresAdmin: true } },
+  { path: '/admin/tournaments/:id/games', name: 'admin-tournament-games', component: AdminFreeFireResultsView, props: true, meta: { requiresAdmin: true } },
 ]
 
 const router = createRouter({

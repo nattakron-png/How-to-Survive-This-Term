@@ -509,3 +509,121 @@ export async function deletePlayer(id) {
   await delay()
   removeWhere(players, (p) => p.id === Number(id))
 }
+
+function matchView(m) {
+  const t = findTournament(m.tournamentId)
+  return {
+    ...m,
+    tournament: t,
+    teamCount: teamIdsOf(t.id).length,
+    isFinal: m.nextMatchId == null,
+    teamA: teams.find((x) => x.id === m.teamAId) ?? null,
+    teamB: teams.find((x) => x.id === m.teamBId) ?? null,
+  }
+}
+
+const isReadyMatch = (m) => m.teamAId && m.teamBId && m.status !== 'COMPLETED'
+
+export function getMatchesToRecord() {
+  const ready = matches.filter(isReadyMatch).map(matchView)
+  const byTime = (a, b) => (a.scheduledAt ?? '').localeCompare(b.scheduledAt ?? '')
+  return {
+    overdue: ready.filter((m) => m.scheduledAt && m.scheduledAt.slice(0, 10) < TODAY).sort((a, b) => byTime(b, a)),
+    today: ready.filter((m) => m.scheduledAt?.startsWith(TODAY)).sort(byTime),
+  }
+}
+
+export function getFreeFireTournamentsToRecord() {
+  return tournaments
+    .filter((t) => t.format === 'POINTS' && t.status !== 'FINISHED')
+    .map((t) => {
+      const list = freeFireGames.filter((g) => g.tournamentId === t.id).sort((a, b) => a.gameNumber - b.gameNumber)
+      const next = list.find((g) => g.status !== 'COMPLETED') ?? null
+      return { tournament: t, nextGame: next, completed: list.filter((g) => g.status === 'COMPLETED').length }
+    })
+    .filter((x) => x.nextGame)
+}
+
+export function getMatchForResult(id) {
+  const m = matches.find((x) => x.id === Number(id))
+  return m ? matchView(m) : null
+}
+
+export async function recordMatchResult(matchId, { teamAScore, teamBScore, winnerTeamId }) {
+  await delay()
+  const m = matches.find((x) => x.id === Number(matchId))
+  if (!m || !isReadyMatch(m)) throw new Error('NOT_READY')
+  if (matchResults.some((r) => r.matchId === m.id)) throw new Error('ALREADY_RECORDED')
+  const a = Number(teamAScore)
+  const b = Number(teamBScore)
+  if (![a, b].every((x) => Number.isInteger(x) && x >= 0)) throw new Error('INVALID_SCORE')
+  if (a === b) throw new Error('DRAW')
+  const expectedWinner = a > b ? m.teamAId : m.teamBId
+  if (Number(winnerTeamId) !== expectedWinner) throw new Error('WRONG_WINNER')
+
+  matchResults.push({ id: nextId(matchResults), matchId: m.id, teamAScore: a, teamBScore: b, winnerTeamId: expectedWinner })
+  m.status = 'COMPLETED'
+
+  const t = findTournament(m.tournamentId)
+  if (t.status === 'UPCOMING') t.status = 'ONGOING'
+  const next = matches.find((x) => x.id === m.nextMatchId)
+  if (next) {
+    const feeders = matches.filter((x) => x.nextMatchId === next.id).sort((x, y) => x.matchNumber - y.matchNumber)
+    if (feeders[0]?.id === m.id) next.teamAId = expectedWinner
+    else next.teamBId = expectedWinner
+    if (next.teamAId && next.teamBId && next.status === 'PENDING') next.status = 'SCHEDULED'
+  } else {
+    t.status = 'FINISHED'
+  }
+  return { winnerTeamId: expectedWinner, nextMatchId: next?.id ?? null, finished: !next }
+}
+
+export function getFreeFireResultBoard(tournamentId) {
+  const t = findTournament(tournamentId)
+  if (!t || t.format !== 'POINTS') return null
+  const list = freeFireGames.filter((g) => g.tournamentId === t.id).sort((a, b) => a.gameNumber - b.gameNumber)
+  const nextId0 = list.find((g) => g.status !== 'COMPLETED')?.id ?? null
+  const points = tournamentPlacementPoints
+    .filter((p) => p.tournamentId === t.id)
+    .reduce((map, p) => map.set(p.placement, p.points), new Map())
+  return {
+    tournament: { ...t, game: gameOf(t.gameId) },
+    teams: teamIdsOf(t.id).map((id) => teams.find((x) => x.id === id)),
+    placementPoints: points,
+    games: list.map((g) => ({
+      ...g,
+      state: g.status === 'COMPLETED' ? 'DONE' : g.id === nextId0 ? 'NEXT' : 'LOCKED',
+      results: freeFireGameResults
+        .filter((r) => r.gameId === g.id)
+        .sort((a, b) => a.placement - b.placement)
+        .map((r) => ({ ...r, team: teams.find((x) => x.id === r.teamId) })),
+    })),
+  }
+}
+
+export async function recordFreeFireGameResult(gameId, rows) {
+  await delay()
+  const g = freeFireGames.find((x) => x.id === Number(gameId))
+  if (!g || g.status === 'COMPLETED') throw new Error('NOT_READY')
+  const t = findTournament(g.tournamentId)
+  const earlier = freeFireGames.filter((x) => x.tournamentId === t.id && x.gameNumber < g.gameNumber)
+  if (earlier.some((x) => x.status !== 'COMPLETED')) throw new Error('OUT_OF_ORDER')
+  const ids = teamIdsOf(t.id)
+  const placements = rows.map((r) => Number(r.placement))
+  if (rows.length !== ids.length || !rows.every((r) => ids.includes(Number(r.teamId)))) throw new Error('MISSING_TEAMS')
+  if (new Set(placements).size !== placements.length || placements.some((p) => !Number.isInteger(p) || p < 1 || p > ids.length)) {
+    throw new Error('INVALID_PLACEMENT')
+  }
+  if (rows.some((r) => !Number.isInteger(Number(r.kills)) || Number(r.kills) < 0)) throw new Error('INVALID_KILLS')
+
+  let id0 = nextId(freeFireGameResults)
+  rows.forEach((r) => {
+    freeFireGameResults.push({ id: id0++, gameId: g.id, tournamentId: t.id, teamId: Number(r.teamId), placement: Number(r.placement), kills: Number(r.kills) })
+  })
+  g.status = 'COMPLETED'
+  if (t.status === 'UPCOMING') t.status = 'ONGOING'
+  const all = freeFireGames.filter((x) => x.tournamentId === t.id)
+  const finished = all.length === t.totalGames && all.every((x) => x.status === 'COMPLETED')
+  if (finished) t.status = 'FINISHED'
+  return { finished }
+}

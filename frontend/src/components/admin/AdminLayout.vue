@@ -13,10 +13,15 @@ const menu = [
   { key: 'tournaments', label: 'รายการแข่ง', icon: '☰', to: '/admin/tournaments' },
   { key: 'teams', label: 'ทีม', icon: '◉', to: '/admin/teams' },
   { key: 'players', label: 'ผู้เล่น', icon: '◎', to: '/admin/players' },
-  { key: 'matches', label: 'แมตช์และผลการแข่ง', icon: '⚑', to: null },
+  { key: 'matches', label: 'แมตช์และผลการแข่ง', icon: '⚑', to: '/admin/matches' },
 ]
 
-const isActive = (item) => (item.exact ? route.path === item.to : route.path.startsWith(item.to))
+const isActive = (item) => {
+  if (item.exact) return route.path === item.to
+  if (item.key === 'matches') return route.path.startsWith(item.to) || /^\/admin\/tournaments\/[^/]+\/games/.test(route.path)
+  if (item.key === 'tournaments') return route.path.startsWith(item.to) && !/\/games$/.test(route.path)
+  return route.path.startsWith(item.to)
+}
 
 const displayName = computed(() => {
   const name = currentUser.value?.username ?? 'admin'

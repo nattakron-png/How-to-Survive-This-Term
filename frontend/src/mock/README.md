@@ -6,6 +6,7 @@
 | ไฟล์ | ตรงกับตาราง / Entity |
 |---|---|
 | `games.js` | `games` → `Game` |
+| `users.js` | `users` → `User` (ใช้กับหน้า login ผู้ดูแล) |
 | `teams.js` | `teams` → `Team` |
 | `players.js` | `players` → `Player` |
 | `tournaments.js` | `tournaments` → `Tournament`, `tournament_teams` → `TournamentTeam` |
@@ -22,6 +23,11 @@
 - แมตช์เชื่อมกันด้วย `nextMatchId` ผู้ชนะของแมตช์ที่มี `matchNumber` น้อยกว่าไปอยู่ช่อง `teamA` ของแมตช์ถัดไป
 - BYE คือแมตช์รอบแรกที่ `status = 'COMPLETED'` และ `teamAId` หรือ `teamBId` เป็น `null` (ไม่มีแถวใน `match_results`)
 - ตัวอย่างใน mock: KKU ROV Cup (กำลังแข่ง), CP Valorant Showdown (6 ทีม มี BYE), Summer Valorant (จบแล้ว มีแชมป์)
+
+## Login ผู้ดูแล
+- `auth.js` จำลองการ login ตอนเชื่อมจริงให้เปลี่ยนเป็น `POST /api/v1/auth/login`
+- บัญชีทดสอบใน mock: `admin` / `admin1234` (ในฐานข้อมูลจริงรหัสผ่านต้องเก็บแบบ hash เช่น BCrypt ห้ามเก็บเป็นข้อความตรงๆ)
+- หน้า `/admin` กันไว้ด้วย route guard ใน `src/router/index.js` แต่การกันจริงต้องทำที่ backend ด้วย (ตรวจ role ทุก endpoint ที่แก้ไขข้อมูล)
 
 ## ค่าที่ทีมต้องตกลงกัน
 - `tournaments.status` ในฐานข้อมูลเป็น VARCHAR อิสระ (ยังไม่มี enum) — mock ใช้ `UPCOMING` | `ONGOING` | `FINISHED`

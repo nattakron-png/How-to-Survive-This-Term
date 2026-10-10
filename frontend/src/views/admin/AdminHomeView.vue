@@ -67,7 +67,7 @@ function pendingStage(item) {
           <p class="updated">อัปเดตล่าสุด {{ formatDate(overview.updatedAt) }}, {{ formatTime(overview.updatedAt) }}</p>
         </div>
         <div class="actions">
-          <button type="button" class="btn btn-outline">+ เพิ่มทีม</button>
+          <RouterLink to="/admin/teams/new" class="btn btn-outline">+ เพิ่มทีม</RouterLink>
           <RouterLink to="/admin/tournaments/new" class="btn btn-accent">+ สร้างรายการแข่ง</RouterLink>
         </div>
       </header>

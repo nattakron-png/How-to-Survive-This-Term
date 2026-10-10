@@ -361,3 +361,106 @@ export async function resetFreeFireSchedule(id) {
   removeWhere(freeFireGames, (g) => g.tournamentId === t.id)
   t.status = 'UPCOMING'
 }
+
+export const ROLE_SUGGESTIONS = {
+  ROV: ['Slayer', 'Jungle', 'Mid', 'Abyssal', 'Support', 'Substitute'],
+  FREE_FIRE: ['Rusher', 'Sniper', 'Support', 'IGL', 'Substitute'],
+  VALORANT: ['Duelist', 'Initiator', 'Controller', 'Sentinel', 'Flex', 'Substitute'],
+  FIGHTING_GAME: ['Player', 'Substitute'],
+}
+
+const tournamentCountOf = (teamId) => tournamentTeams.filter((tt) => tt.teamId === teamId).length
+
+export function getAdminTeams() {
+  return teams.map((team) => {
+    const tournamentCount = tournamentCountOf(team.id)
+    return {
+      ...team,
+      game: gameOf(team.gameId),
+      playerCount: playerCountOf(team.id),
+      playerNames: players.filter((p) => p.teamId === team.id).map((p) => p.name),
+      tournamentCount,
+      canDelete: tournamentCount === 0,
+    }
+  })
+}
+
+export function getTeamForm(id) {
+  const team = teams.find((t) => t.id === Number(id))
+  if (!team) return null
+  return {
+    ...team,
+    players: players.filter((p) => p.teamId === team.id).map((p) => ({ ...p })),
+    gameLocked: tournamentCountOf(team.id) > 0,
+  }
+}
+
+export function getFreePlayers() {
+  return players.filter((p) => p.teamId == null).map((p) => ({ ...p }))
+}
+
+function validateTeam(payload, currentId) {
+  const errors = {}
+  const name = payload.name?.trim() ?? ''
+  if (!name) errors.name = 'กรุณากรอกชื่อทีม'
+  else if (name.length > 150) errors.name = 'ชื่อทีมยาวเกิน 150 ตัวอักษร'
+  else if (teams.some((t) => t.id !== currentId && t.name.toLowerCase() === name.toLowerCase())) {
+    errors.name = 'มีทีมชื่อนี้อยู่แล้ว'
+  }
+  if (!gameOf(payload.gameId)) errors.gameId = 'กรุณาเลือกเกม'
+  const rows = payload.players ?? []
+  if (rows.some((p) => !p.name?.trim() || !p.role?.trim())) errors.players = 'ผู้เล่นทุกคนต้องมีชื่อและตำแหน่ง'
+  return errors
+}
+
+export async function saveTeam(id, payload) {
+  await delay()
+  const current = id == null ? null : teams.find((t) => t.id === Number(id))
+  if (id != null && !current) throw new Error('NOT_FOUND')
+  const gameLocked = current ? tournamentCountOf(current.id) > 0 : false
+  const safe = { ...payload, gameId: gameLocked ? current.gameId : payload.gameId }
+  const errors = validateTeam(safe, current?.id ?? null)
+  if (Object.keys(errors).length) throw new ValidationError(errors)
+
+  const fields = {
+    name: safe.name.trim(),
+    description: safe.description?.trim() || null,
+    gameId: Number(safe.gameId),
+    logoUrl: safe.logoUrl ?? null,
+  }
+  let team = current
+  if (team) Object.assign(team, fields)
+  else {
+    team = { id: nextId(teams), ...fields, createdAt: `${TODAY}T21:00:00` }
+    teams.push(team)
+  }
+
+  const keep = new Set()
+  let playerId = nextId(players)
+  for (const row of safe.players) {
+    const data = { name: row.name.trim(), role: row.role.trim(), description: row.description?.trim() || null }
+    const existing = row.id ? players.find((p) => p.id === row.id) : null
+    if (existing) {
+      Object.assign(existing, data, { teamId: team.id })
+      keep.add(existing.id)
+    } else {
+      players.push({ id: playerId, ...data, teamId: team.id })
+      keep.add(playerId)
+      playerId += 1
+    }
+  }
+  players.forEach((p) => {
+    if (p.teamId === team.id && !keep.has(p.id)) p.teamId = null
+  })
+  return team
+}
+
+export async function deleteTeam(id) {
+  await delay()
+  const team = teams.find((t) => t.id === Number(id))
+  if (!team || tournamentCountOf(team.id) > 0) throw new Error('CANNOT_DELETE')
+  players.forEach((p) => {
+    if (p.teamId === team.id) p.teamId = null
+  })
+  removeWhere(teams, (t) => t.id === team.id)
+}

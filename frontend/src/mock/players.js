@@ -176,4 +176,10 @@ export const players = [
   { id: 175, name: 'Frost34', role: 'Player', description: null, teamId: 39 },
   { id: 176, name: 'Vex40', role: 'Player', description: null, teamId: 40 },
   { id: 177, name: 'Quill98', role: 'Substitute', description: null, teamId: 40 },
+  { id: 178, name: 'Kite21', role: 'Mid', description: 'เคยเล่นตำแหน่ง Mid ใน ROV', teamId: null },
+  { id: 179, name: 'Mochi07', role: 'Support', description: null, teamId: null },
+  { id: 180, name: 'Rook55', role: 'Duelist', description: 'สาย Valorant', teamId: null },
+  { id: 181, name: 'Pebble3', role: 'Sniper', description: null, teamId: null },
+  { id: 182, name: 'Zest88', role: 'Jungle', description: null, teamId: null },
+  { id: 183, name: 'Nori14', role: 'Player', description: 'ถนัด Street Fighter 6', teamId: null },
 ]

@@ -150,4 +150,84 @@ sequenceDiagram
 | Data Mapper | แปลง Entity เป็น DTO ในที่เดียว | `MatchMapper` |
 | Dependency Injection | ให้ Spring ประกอบคลาสให้ ไม่สร้างกันเอง ทำให้สลับเป็น mock ตอนทดสอบได้ | constructor ของ `ScheduleServiceImpl`, `ScheduleController` และ `MatchController` |
 
+## คนที่ 5: โมดูลผลการแข่ง
+
+### Observer Pattern (Pattern หลักของโมดูลนี้)
+
+| หัวข้อ | รายละเอียด |
+| --- | --- |
+| **ปัญหาที่แก้** | พอบันทึกผลแล้ว ระบบยังมีงานต่ออีก: แบบแพ้คัดออกต้องส่งผู้ชนะไปช่องของแมตช์ถัดไป และถ้าเป็นนัดชิงต้องเปลี่ยนรายการเป็น COMPLETED ส่วนแบบเก็บคะแนนต้องเช็กว่าแข่งครบทุกเกมแล้วหรือยัง ถ้าเขียนงานพวกนี้ไว้ใน Service บันทึกผลทั้งหมด Service จะทำหลายหน้าที่เกินไป และทุกครั้งที่มีงานใหม่ต้องเกิดขึ้นหลังบันทึกผล (เช่น แจ้งเตือน) ก็ต้องกลับมาแก้ Service ตัวเดิม |
+| **วิธีแก้** | Service บันทึกผลแล้ว **ประกาศเหตุการณ์ (event)** ออกไปเท่านั้น โดยไม่รู้ว่าใครรอฟังอยู่ งานต่อเนื่องแต่ละอย่างแยกเป็น **Listener** ของตัวเองที่รอรับ event นั้น ทำได้ผ่านกลไก `ApplicationEventPublisher` และ `@EventListener` ของ Spring |
+| **Sequence Diagram** | [doc/diagrams/sequence-diagram-result.md](diagrams/sequence-diagram-result.md) (ฉบับเต็มทั้งสองรูปแบบ) |
+
+บทบาทของแต่ละคลาส
+
+| บทบาท | คลาส | ไฟล์ |
+| --- | --- | --- |
+| Subject (ผู้ประกาศ) | `MatchResultServiceImpl` | `service/impl/MatchResultServiceImpl.java` |
+| Subject (ผู้ประกาศ) | `FreeFireResultServiceImpl` | `service/impl/FreeFireResultServiceImpl.java` |
+| Event | `MatchResultRecordedEvent(matchId, winnerTeamId)` | `event/MatchResultRecordedEvent.java` |
+| Event | `FreeFireGameRecordedEvent(gameId, tournamentId)` | `event/FreeFireGameRecordedEvent.java` |
+| Observer (ผู้รับ) | `BracketProgressionListener` | `event/BracketProgressionListener.java` |
+| Observer (ผู้รับ) | `FreeFireCompletionListener` | `event/FreeFireCompletionListener.java` |
+| ตัวกลางส่ง event | `ApplicationEventPublisher` (ของ Spring) | ส่งเข้ามาทาง constructor ของ Service |
+
+**หน้าที่ของ Observer แต่ละตัว**
+
+* `BracketProgressionListener` รับ `MatchResultRecordedEvent` แล้วส่งผู้ชนะไปแมตช์ถัดไป (`next_match_id`) โดยแมตช์เลขคี่ไปช่อง A และเลขคู่ไปช่อง B ถ้ารู้ทีมครบทั้งสองฝั่งแล้วจะเปลี่ยนแมตช์นั้นเป็น SCHEDULED แต่ถ้าไม่มีแมตช์ถัดไป แปลว่าเป็นนัดชิง จึงเปลี่ยนรายการเป็น `TournamentStatus.COMPLETED`
+* `FreeFireCompletionListener` รับ `FreeFireGameRecordedEvent` แล้วนับเกมที่ COMPLETED ถ้าครบ `total_games` จะเปลี่ยนรายการเป็น `TournamentStatus.COMPLETED`
+
+**ทำงานใน Transaction เดียวกัน:** `@EventListener` ของ Spring เรียก Listener ทันทีใน thread และ transaction เดียวกับ Service ถ้า Listener โยน Exception (เช่น ช่องของแมตช์ถัดไปมีทีมอื่นอยู่แล้ว) ผลที่เพิ่งบันทึกจะถูก rollback ไปด้วย ข้อมูลผลกับสายการแข่งจึงไม่มีทางขัดกัน ที่เลือกแบบนี้แทน `@TransactionalEventListener` เพราะต้องการให้ทั้งสองอย่างสำเร็จหรือล้มเหลวไปพร้อมกัน
+
+### ลำดับการทำงาน (บันทึกผลแบบแพ้คัดออก)
+
+```mermaid
+sequenceDiagram
+    actor A as ผู้ดูแล
+    participant C as MatchResultController
+    participant S as MatchResultServiceImpl
+    participant P as ApplicationEventPublisher
+    participant L as BracketProgressionListener
+    participant DB as ฐานข้อมูล
+
+    A->>C: POST /api/v1/matches/{id}/result
+    C->>S: record(matchId, request)
+    S->>DB: ค้นหาแมตช์ และเช็กว่ายังไม่มีผล
+    alt ไม่ผ่านกฎ
+        S-->>C: Exception
+        C-->>A: 400 / 404 / 409
+    else ผ่านกฎทั้ง 7 ข้อ
+        S->>DB: บันทึก match_results และเปลี่ยนแมตช์เป็น COMPLETED
+        S->>P: publishEvent(MatchResultRecordedEvent)
+        P->>L: onResultRecorded(event)
+        alt มีแมตช์ถัดไป
+            L->>DB: ใส่ผู้ชนะในช่อง A หรือ B ของแมตช์ถัดไป
+        else เป็นนัดชิง
+            L->>DB: เปลี่ยนรายการเป็น COMPLETED
+        end
+        L-->>S: เสร็จ (transaction เดียวกัน)
+        S-->>C: MatchResultResponse
+        C-->>A: 201 Created
+    end
+```
+
+แบบเก็บคะแนนทำงานแบบเดียวกัน ต่างกันที่ `FreeFireResultServiceImpl` ประกาศ `FreeFireGameRecordedEvent` และ `FreeFireCompletionListener` เป็นตัวรับ
+
+### ข้อดีที่ได้ในโปรเจคนี้
+
+* **Service ทำหน้าที่เดียว:** Service แค่ตรวจกฎและบันทึกผล ไม่ต้องรู้เรื่องสายการแข่งหรือการจบรายการ (ดู [solid-analysis.md](solid-analysis.md))
+* **เพิ่มงานใหม่ได้โดยไม่แก้ของเดิม:** ถ้าอยากแจ้งเตือนเมื่อมีผลใหม่ ก็สร้าง Listener ตัวใหม่ที่รับ `MatchResultRecordedEvent` ได้เลย ไม่ต้องแตะ `MatchResultServiceImpl`
+* **ทดสอบแยกกันได้:** `MatchResultServiceImplTest` ใช้ `ApplicationEventPublisher` ที่เป็น mock แล้ว `verify` ว่ามีการประกาศ event ส่วน `BracketProgressionListenerTest` กับ `FreeFireCompletionListenerTest` ทดสอบ Listener ตรงๆ โดยไม่ต้องผ่าน Service
+
+### Enterprise Patterns ที่ใช้ในโมดูลนี้
+
+| Pattern | ปัญหาที่แก้ | ไฟล์/คลาส |
+| --- | --- | --- |
+| Service Layer | แยกกฎการบันทึกผลออกจาก Controller | `MatchResultService`, `MatchResultServiceImpl`, `FreeFireResultService`, `FreeFireResultServiceImpl` |
+| Repository | แยกการเข้าถึงฐานข้อมูลออกจากกฎทางธุรกิจ | `MatchResultRepository`, `FreeFireGameRepository`, `FreeFireGameResultRepository`, `TournamentPlacementPointRepository` |
+| DTO | ไม่ส่ง Entity ออกไปให้ client และตรวจข้อมูลขาเข้าด้วย Bean Validation | `CreateMatchResultRequest`, `RecordFreeFireResultsRequest`, `MatchResultResponse`, `FreeFireStandingsResponse` |
+| Data Mapper | แปลง Entity เป็น DTO ในที่เดียว | `MatchResultMapper` |
+| Domain Service | แยกการคำนวณคะแนนและการตัดสินอันดับ (Booyah → Kills → อันดับเกมล่าสุด) ออกเป็นคลาสที่ไม่ยุ่งกับฐานข้อมูล | `PointsCalculator` |
+| Dependency Injection | ให้ Spring ประกอบคลาสให้ ทำให้สลับเป็น mock ตอนทดสอบได้ | constructor ของ Service, Listener และ Controller ทั้งหมด |
+
 

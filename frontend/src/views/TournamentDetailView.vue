@@ -48,6 +48,9 @@ const standings = computed(() => (isPoints.value ? getFreeFireStandings(props.id
 const placementPoints = computed(() => (isPoints.value ? getPlacementPoints(props.id) : []))
 const nextGame = computed(() => (isPoints.value ? getNextFreeFireGame(props.id) : null))
 const recentGames = computed(() => (isPoints.value ? getRecentFreeFireGames(props.id) : []))
+const pointsByTeam = computed(
+  () => new Map((standings.value?.standings ?? []).map((row) => [row.teamId, row.totalPoints])),
+)
 
 const pointsSummary = computed(() => {
   if (!isPoints.value) return ''
@@ -164,14 +167,16 @@ watch(() => props.id, () => {
 
       <section v-else-if="activeTab === 'teams'" class="section">
         <div class="section-header">
-          <h2 class="section-title">ทีมที่เข้าร่วม</h2>
-          <span class="section-meta">{{ tournament.teams.length }} ทีม · กดที่ทีมเพื่อดูผู้เล่น</span>
+          <h2 class="section-title small">ทีมที่เข้าร่วม</h2>
+          <span class="section-meta light">{{ tournament.teams.length }} ทีม · กดที่ทีมเพื่อดูรายชื่อผู้เล่น</span>
         </div>
-        <div v-if="tournament.teams.length" class="participants">
+        <div v-if="tournament.teams.length" class="participants wide">
           <ParticipantCard
             v-for="team in tournament.teams"
             :key="team.id"
             :team="team"
+            compact
+            :points="pointsByTeam.get(team.id) ?? null"
             :selected="team.id === selectedTeamId"
             @select="selectedTeamId = team.id"
           />
@@ -357,6 +362,9 @@ watch(() => props.id, () => {
 .section-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .section-title { font-family: var(--font-heading); font-weight: 600; font-size: 24px; }
 .section-meta { color: var(--color-muted); font-size: 15px; font-weight: 600; }
+.section-title.small { font-size: 22px; }
+.section-meta.light { font-size: 14px; font-weight: 400; }
+.participants.wide { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
 
 .participants {
   display: grid;
@@ -434,6 +442,7 @@ watch(() => props.id, () => {
 @media (max-width: 640px) {
   .header { flex-direction: column; align-items: flex-start; gap: 16px; }
   .header.compact .name { font-size: 28px; }
+  .participants.wide { grid-template-columns: 1fr; }
   .header.compact .logo { width: 72px; height: 72px; font-size: 22px; }
   .side-box { align-self: stretch; }
   .logo { width: 80px; height: 80px; font-size: 24px; border-radius: var(--radius-lg); }

@@ -4,19 +4,21 @@ import { initials } from '@/utils/format'
 defineProps({
   team: { type: Object, required: true },
   selected: { type: Boolean, default: false },
+  compact: { type: Boolean, default: false },
+  points: { type: Number, default: null },
 })
 defineEmits(['select'])
 </script>
 
 <template>
-  <button type="button" class="participant" :class="{ selected }" :aria-pressed="selected" @click="$emit('select', team)">
+  <button type="button" class="participant" :class="{ selected, compact }" :aria-pressed="selected" @click="$emit('select', team)">
     <span class="logo">
       <img v-if="team.logoUrl" :src="team.logoUrl" :alt="team.name" />
       <template v-else>{{ initials(team.name) }}</template>
     </span>
     <div class="text">
       <span class="name">{{ team.name }}</span>
-      <span class="players">ผู้เล่น {{ team.playerCount }} คน</span>
+      <span class="players">ผู้เล่น {{ team.playerCount }} คน<template v-if="points !== null"> · {{ points }} คะแนน</template></span>
     </div>
     <span class="chevron" aria-hidden="true">›</span>
   </button>
@@ -67,4 +69,12 @@ defineEmits(['select'])
 }
 .players { color: var(--color-muted); font-size: 13px; }
 .chevron { color: var(--color-muted); font-size: 22px; font-weight: 600; }
+.participant.compact {
+  padding: 14px;
+  border: 2px solid transparent;
+}
+.participant.compact .logo { width: 48px; height: 48px; border-radius: 8px; font-family: var(--font-body); font-size: 16px; }
+.participant.compact .chevron { font-size: 18px; }
+.participant.compact:hover { border-color: var(--color-border); }
+.participant.compact.selected { border-color: var(--color-accent); padding: 14px; }
 </style>

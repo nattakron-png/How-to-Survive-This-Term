@@ -1,6 +1,6 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
-import { ROLE_SUGGESTIONS, savePlayer } from '@/mock/admin'
+import { ROLE_SUGGESTIONS, savePlayer } from '@/api/admin'
 
 const props = defineProps({
   player: { type: Object, default: null },
@@ -55,7 +55,7 @@ async function submit() {
     emit('saved', saved)
   } catch (e) {
     if (e.fields) errors.value = e.fields
-    else saveError.value = 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง'
+    else saveError.value = e.status ? `บันทึกไม่สำเร็จ: ${e.message}` : 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง'
   } finally {
     saving.value = false
   }

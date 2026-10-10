@@ -4,7 +4,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import AdminLayout from '@/components/admin/AdminLayout.vue'
 import ConfirmDialog from '@/components/admin/ConfirmDialog.vue'
 import TeamLogo from '@/components/TeamLogo.vue'
-import { getFreeFireResultBoard, recordFreeFireGameResult } from '@/mock/admin'
+import { getFreeFireResultBoard, recordFreeFireGameResult } from '@/api/admin'
 import { formatDate, formatTime, formatTournamentFormat } from '@/utils/format'
 
 const props = defineProps({
@@ -152,7 +152,7 @@ async function save() {
     router.replace({ query: {} })
     version.value += 1
   } catch (e) {
-    saveError.value = ERROR_TEXT[e.message] ?? 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง'
+    saveError.value = ERROR_TEXT[e.message] ?? (e.status ? `บันทึกไม่สำเร็จ: ${e.message}` : 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง')
   } finally {
     saving.value = false
   }

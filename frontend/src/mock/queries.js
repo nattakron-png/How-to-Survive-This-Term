@@ -3,9 +3,11 @@ import { tournaments, tournamentTeams } from './tournaments'
 import { freeFireGames, matches, matchResults } from './matches'
 import { freeFireGameResults, tournamentPlacementPoints } from './freeFire'
 import { players } from './players'
+import { teams } from './teams'
 import { getRegisteredPlayers, getRegisteredTeam } from './rosters'
 
-export const TODAY = '2026-10-16'
+// วันที่วันนี้ตามเวลาเครื่อง (รูปแบบ YYYY-MM-DD)
+export const TODAY = new Date().toLocaleDateString('sv-SE')
 
 const byId = (list) => ({ get: (id) => list.find((x) => x.id === id) })
 const gameById = byId(games)

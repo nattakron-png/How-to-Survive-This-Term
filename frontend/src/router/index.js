@@ -14,6 +14,7 @@ import AdminPlayersView from '@/views/admin/AdminPlayersView.vue'
 import AdminMatchesView from '@/views/admin/AdminMatchesView.vue'
 import AdminFreeFireResultsView from '@/views/admin/AdminFreeFireResultsView.vue'
 import { useAuth } from '@/stores/auth'
+import { loadAdminData } from '@/api/adminSync'
 
 const routes = [
   { path: '/', name: 'home', component: HomeView },
@@ -40,10 +41,19 @@ const router = createRouter({
   scrollBehavior: (to, from, saved) => saved ?? (to.path !== from.path ? { top: 0 } : false),
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const { isAdmin } = useAuth()
-  if (to.matched.some((r) => r.meta.requiresAdmin) && !isAdmin.value) {
+  const needsAdmin = to.matched.some((r) => r.meta.requiresAdmin)
+  if (needsAdmin && !isAdmin.value) {
     return { name: 'admin-login', query: { redirect: to.fullPath } }
+  }
+  if (needsAdmin) {
+    // หน้าผู้ดูแลอ่านข้อมูลแบบ sync จึงโหลดข้อมูลจริงจาก backend ให้เสร็จก่อนเข้าหน้า
+    try {
+      await loadAdminData()
+    } catch (error) {
+      console.error('โหลดข้อมูลจาก backend ไม่สำเร็จ', error)
+    }
   }
   if (to.meta.guestOnly && isAdmin.value) {
     return { name: 'admin-home' }

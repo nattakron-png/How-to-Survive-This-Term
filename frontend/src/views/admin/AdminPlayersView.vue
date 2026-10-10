@@ -6,7 +6,7 @@ import PlayerDialog from '@/components/admin/PlayerDialog.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import SelectBox from '@/components/SelectBox.vue'
 import TeamLogo from '@/components/TeamLogo.vue'
-import { deletePlayer, getAdminPlayers, getAdminTeams } from '@/mock/admin'
+import { deletePlayer, getAdminPlayers, getAdminTeams } from '@/api/admin'
 import { getGames } from '@/mock/queries'
 
 const PAGE_SIZE = 8
@@ -98,6 +98,8 @@ async function confirmDelete(player) {
     await deletePlayer(player.id)
     flash.value = `ลบ ${player.name} แล้ว`
     version.value += 1
+  } catch (e) {
+    window.alert(e.status ? `ลบไม่สำเร็จ: ${e.message}` : 'ลบไม่สำเร็จ ลองใหม่อีกครั้ง')
   } finally {
     deletingId.value = null
     confirmingId.value = null

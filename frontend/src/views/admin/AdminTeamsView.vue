@@ -5,7 +5,7 @@ import AdminLayout from '@/components/admin/AdminLayout.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import FilterChip from '@/components/FilterChip.vue'
 import TeamLogo from '@/components/TeamLogo.vue'
-import { deleteTeam, getAdminTeams } from '@/mock/admin'
+import { deleteTeam, getAdminTeams } from '@/api/admin'
 import { getGames } from '@/mock/queries'
 import { formatDate } from '@/utils/format'
 
@@ -58,6 +58,8 @@ async function confirmDelete(team) {
   try {
     await deleteTeam(team.id)
     version.value += 1
+  } catch (e) {
+    window.alert(e.status ? `ลบไม่สำเร็จ: ${e.message}` : 'ลบไม่สำเร็จ ลองใหม่อีกครั้ง')
   } finally {
     deletingId.value = null
     confirmingId.value = null

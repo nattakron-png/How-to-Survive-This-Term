@@ -17,6 +17,14 @@ export function removeRoster(tournamentId, teamId) {
   snapshots.delete(key(tournamentId, teamId))
 }
 
+// ใช้ตอนโหลดข้อมูลจริงจาก backend (snapshot ทีมและผู้เล่น ณ วันที่สมัคร)
+export function replaceRosters(entries) {
+  snapshots.clear()
+  for (const entry of entries) {
+    snapshots.set(key(entry.tournamentId, entry.teamId), { team: entry.team, players: entry.players })
+  }
+}
+
 export function getRegisteredTeam(tournamentId, teamId) {
   return snapshots.get(key(tournamentId, teamId))?.team ?? null
 }

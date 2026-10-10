@@ -2,7 +2,7 @@
 import { computed, reactive, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import AdminLayout from '@/components/admin/AdminLayout.vue'
-import { ROLE_SUGGESTIONS, getFreePlayers, getTeamForm, saveTeam } from '@/mock/admin'
+import { ROLE_SUGGESTIONS, getFreePlayers, getTeamForm, saveTeam } from '@/api/admin'
 import { getGames } from '@/mock/queries'
 import { initials } from '@/utils/format'
 
@@ -109,7 +109,7 @@ async function submit() {
     router.push('/admin/teams')
   } catch (e) {
     if (e.fields) errors.value = e.fields
-    else saveError.value = 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง'
+    else saveError.value = e.status ? `บันทึกไม่สำเร็จ: ${e.message}` : 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง'
   } finally {
     saving.value = false
   }

@@ -7,7 +7,7 @@ import { players } from './players'
 
 export const TODAY = '2026-10-16'
 
-const byId = (list) => new Map(list.map((x) => [x.id, x]))
+const byId = (list) => ({ get: (id) => list.find((x) => x.id === id) })
 const gameById = byId(games)
 const teamById = byId(teams)
 const tournamentById = byId(tournaments)

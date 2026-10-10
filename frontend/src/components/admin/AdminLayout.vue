@@ -1,18 +1,22 @@
 <script setup>
 import { computed } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/stores/auth'
+import '@/assets/admin.css'
 
+const route = useRoute()
 const router = useRouter()
 const { currentUser, logout } = useAuth()
 
 const menu = [
-  { key: 'overview', label: 'ภาพรวม', icon: '◧', to: '/admin' },
-  { key: 'tournaments', label: 'รายการแข่ง', icon: '☰', to: null },
+  { key: 'overview', label: 'ภาพรวม', icon: '◧', to: '/admin', exact: true },
+  { key: 'tournaments', label: 'รายการแข่ง', icon: '☰', to: '/admin/tournaments' },
   { key: 'teams', label: 'ทีม', icon: '◉', to: null },
   { key: 'players', label: 'ผู้เล่น', icon: '◎', to: null },
   { key: 'matches', label: 'แมตช์และผลการแข่ง', icon: '⚑', to: null },
 ]
+
+const isActive = (item) => (item.exact ? route.path === item.to : route.path.startsWith(item.to))
 
 const displayName = computed(() => {
   const name = currentUser.value?.username ?? 'admin'
@@ -39,7 +43,7 @@ function signOut() {
 
       <nav class="menu">
         <template v-for="item in menu" :key="item.key">
-          <RouterLink v-if="item.to" :to="item.to" class="menu-item" exact-active-class="is-active">
+          <RouterLink v-if="item.to" :to="item.to" class="menu-item" :class="{ 'is-active': isActive(item) }">
             <span class="menu-icon" aria-hidden="true">{{ item.icon }}</span>
             {{ item.label }}
           </RouterLink>

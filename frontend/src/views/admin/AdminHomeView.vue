@@ -1,4 +1,5 @@
 <script setup>
+import { RouterLink } from 'vue-router'
 import AdminLayout from '@/components/admin/AdminLayout.vue'
 import TeamLogo from '@/components/TeamLogo.vue'
 import { getAdminOverview, getPendingResults, getUpcomingTournaments } from '@/mock/queries'
@@ -67,7 +68,7 @@ function pendingStage(item) {
         </div>
         <div class="actions">
           <button type="button" class="btn btn-outline">+ เพิ่มทีม</button>
-          <button type="button" class="btn btn-accent">+ สร้างรายการแข่ง</button>
+          <RouterLink to="/admin/tournaments/new" class="btn btn-accent">+ สร้างรายการแข่ง</RouterLink>
         </div>
       </header>
 
@@ -131,7 +132,7 @@ function pendingStage(item) {
                   <span class="badge" :class="`tone-${setupBadge[t.setupStatus].tone}`">{{ setupBadge[t.setupStatus].label }}</span>
                 </span>
               </span>
-              <button type="button" class="btn btn-outline btn-sm">{{ isReady(t) ? 'จัดการ' : 'จัดการทีม' }}</button>
+              <RouterLink :to="`/admin/tournaments/${t.id}/teams`" class="btn btn-outline btn-sm">{{ isReady(t) ? 'จัดการ' : 'จัดการทีม' }}</RouterLink>
             </li>
           </ul>
           <p v-else class="empty">ไม่มีรายการที่กำลังจะเริ่ม</p>
@@ -150,6 +151,9 @@ function pendingStage(item) {
 .actions { display: flex; gap: 12px; flex-wrap: wrap; }
 
 .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 12px 24px;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);

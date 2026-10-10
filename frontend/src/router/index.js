@@ -5,6 +5,9 @@ import TournamentDetailView from '@/views/TournamentDetailView.vue'
 import MatchDetailView from '@/views/MatchDetailView.vue'
 import AdminLoginView from '@/views/admin/AdminLoginView.vue'
 import AdminHomeView from '@/views/admin/AdminHomeView.vue'
+import AdminTournamentsView from '@/views/admin/AdminTournamentsView.vue'
+import AdminTournamentFormView from '@/views/admin/AdminTournamentFormView.vue'
+import AdminTournamentTeamsView from '@/views/admin/AdminTournamentTeamsView.vue'
 import { useAuth } from '@/stores/auth'
 
 const routes = [
@@ -14,6 +17,10 @@ const routes = [
   { path: '/tournaments/:id/matches/:matchId', name: 'match-detail', component: MatchDetailView, props: true },
   { path: '/admin/login', name: 'admin-login', component: AdminLoginView, meta: { guestOnly: true } },
   { path: '/admin', name: 'admin-home', component: AdminHomeView, meta: { requiresAdmin: true } },
+  { path: '/admin/tournaments', name: 'admin-tournaments', component: AdminTournamentsView, meta: { requiresAdmin: true } },
+  { path: '/admin/tournaments/new', name: 'admin-tournament-new', component: AdminTournamentFormView, meta: { requiresAdmin: true } },
+  { path: '/admin/tournaments/:id/edit', name: 'admin-tournament-edit', component: AdminTournamentFormView, props: true, meta: { requiresAdmin: true } },
+  { path: '/admin/tournaments/:id/teams', name: 'admin-tournament-teams', component: AdminTournamentTeamsView, props: true, meta: { requiresAdmin: true } },
 ]
 
 const router = createRouter({

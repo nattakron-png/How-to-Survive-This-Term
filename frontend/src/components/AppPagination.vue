@@ -4,6 +4,7 @@ import { computed } from 'vue'
 const props = defineProps({
   totalItems: { type: Number, required: true },
   pageSize: { type: Number, required: true },
+  note: { type: String, default: '' },
 })
 const page = defineModel({ type: Number, required: true })
 
@@ -18,7 +19,7 @@ function go(p) {
 
 <template>
   <div class="pagination">
-    <p class="summary">แสดง {{ from }}–{{ to }} จาก {{ totalItems }} รายการ</p>
+    <p class="summary">แสดง {{ from }}–{{ to }} จาก {{ totalItems }} รายการ<template v-if="note"> · {{ note }}</template></p>
     <nav class="pages" aria-label="เปลี่ยนหน้า">
       <button type="button" class="page" :disabled="page === 1" aria-label="หน้าก่อนหน้า" @click="go(page - 1)">‹</button>
       <button

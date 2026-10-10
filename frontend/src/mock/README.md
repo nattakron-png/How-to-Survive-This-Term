@@ -24,6 +24,17 @@
 - BYE คือแมตช์รอบแรกที่ `status = 'COMPLETED'` และ `teamAId` หรือ `teamBId` เป็น `null` (ไม่มีแถวใน `match_results`)
 - ตัวอย่างใน mock: KKU ROV Cup (กำลังแข่ง), CP Valorant Showdown (6 ทีม มี BYE), Summer Valorant (จบแล้ว มีแชมป์)
 
+## หน้าผู้ดูแล (admin.js)
+- `admin.js` จำลอง endpoint ฝั่งผู้ดูแล ทุกฟังก์ชันที่แก้ข้อมูลเป็น `async` เหมือนเรียก API จริง เช่น
+  `createTournament` → `POST /api/v1/tournaments`, `updateTournament` → `PUT /api/v1/tournaments/{id}`,
+  `addTeamToTournament` → `POST /api/v1/tournaments/{id}/teams`, `generateBracket` → `POST /api/v1/tournaments/{id}/bracket`,
+  `generateFreeFireSchedule` → `POST /api/v1/tournaments/{id}/free-fire-games`
+- ข้อมูลที่แก้จะอยู่ในหน่วยความจำจนกว่าจะรีเฟรชหน้า (เป็นแค่ mock)
+- กฎที่ backend ต้องตรวจซ้ำ: ทีมต้องเป็นเกมเดียวกับรายการ, วันแข่งห้ามทับกับรายการอื่นของทีม, Free Fire ไม่เกิน 12 ทีม,
+  สร้างสาย/ตารางเกมแล้วห้ามเพิ่มหรือลบทีม, ลบรายการได้เฉพาะสถานะ `UPCOMING`, ล้างสายได้เมื่อยังไม่มีผลการแข่ง
+- สร้างสาย: ขนาดสาย = 2 ยกกำลังที่พอดีกับจำนวนทีม จับคู่ seed แบบมาตรฐาน (1 พบอันดับสุดท้าย) ทีม seed ต้นๆ ได้ BYE
+  ลำดับ seed ส่งมาตอนสร้างสายเท่านั้น (ตาราง `tournament_teams` ไม่มีคอลัมน์ seed)
+
 ## Login ผู้ดูแล
 - `auth.js` จำลองการ login ตอนเชื่อมจริงให้เปลี่ยนเป็น `POST /api/v1/auth/login`
 - บัญชีทดสอบใน mock: `admin` / `admin1234` (ในฐานข้อมูลจริงรหัสผ่านต้องเก็บแบบ hash เช่น BCrypt ห้ามเก็บเป็นข้อความตรงๆ)

@@ -1,8 +1,8 @@
 import { games } from './games'
 import { teams } from './teams'
 import { tournaments, tournamentTeams } from './tournaments'
-import { matches, matchResults } from './matches'
-import { freeFireStandings } from './freeFireStandings'
+import { freeFireGames, matches, matchResults } from './matches'
+import { freeFireGameResults, tournamentPlacementPoints } from './freeFire'
 import { players } from './players'
 
 export const TODAY = '2026-10-16'
@@ -22,8 +22,8 @@ function teamsOf(tournamentId) {
 function championOf(tournament) {
   if (tournament.status !== 'FINISHED') return null
   if (tournament.format === 'POINTS') {
-    const top = freeFireStandings.find((s) => s.tournamentId === tournament.id)?.standings[0]
-    return top ? teamById.get(top.teamId) : null
+    const top = getFreeFireStandings(tournament.id).standings[0]
+    return top && top.totalPoints > 0 ? teamById.get(top.teamId) : null
   }
   const final = matches
     .filter((m) => m.tournamentId === tournament.id)
@@ -123,4 +123,68 @@ export function getMatch(tournamentId, matchId) {
 
 export function getPlayersOfTeam(teamId) {
   return players.filter((p) => p.teamId === Number(teamId))
+}
+
+export function getPlacementPoints(tournamentId) {
+  return tournamentPlacementPoints
+    .filter((p) => p.tournamentId === Number(tournamentId))
+    .sort((a, b) => a.placement - b.placement)
+}
+
+export function getFreeFireGames(tournamentId) {
+  return freeFireGames
+    .filter((g) => g.tournamentId === Number(tournamentId))
+    .sort((a, b) => a.gameNumber - b.gameNumber)
+}
+
+export function getFreeFireStandings(tournamentId) {
+  const id = Number(tournamentId)
+  const tournament = tournamentById.get(id)
+  const games = getFreeFireGames(id)
+  const completed = games.filter((g) => g.status === 'COMPLETED')
+  const pointsFor = new Map(getPlacementPoints(id).map((p) => [p.placement, p.points]))
+  const perKill = tournament?.pointsPerKill ?? 1
+  const lastGameId = completed.at(-1)?.id
+
+  const rows = teamsOf(id).map((team) => {
+    const pointsPerGame = []
+    let totalPoints = 0
+    let booyahs = 0
+    let kills = 0
+    let lastPlacement = Infinity
+    for (let n = 1; n <= (tournament?.totalGames ?? games.length); n += 1) {
+      const game = completed.find((g) => g.gameNumber === n)
+      const result = game && freeFireGameResults.find((r) => r.gameId === game.id && r.teamId === team.id)
+      if (!result) {
+        pointsPerGame.push(null)
+        continue
+      }
+      const points = (pointsFor.get(result.placement) ?? 0) + result.kills * perKill
+      pointsPerGame.push(points)
+      totalPoints += points
+      kills += result.kills
+      if (result.placement === 1) booyahs += 1
+      if (game.id === lastGameId) lastPlacement = result.placement
+    }
+    return { team, teamId: team.id, teamName: team.name, totalPoints, booyahs, kills, pointsPerGame, lastPlacement }
+  })
+
+  rows.sort(
+    (a, b) =>
+      b.totalPoints - a.totalPoints ||
+      b.booyahs - a.booyahs ||
+      b.kills - a.kills ||
+      a.lastPlacement - b.lastPlacement,
+  )
+
+  return {
+    tournamentId: id,
+    totalGames: tournament?.totalGames ?? games.length,
+    gamesCompleted: completed.length,
+    standings: rows.map(({ lastPlacement, ...row }, i) => ({ rank: i + 1, ...row })),
+  }
+}
+
+export function getNextFreeFireGame(tournamentId) {
+  return getFreeFireGames(tournamentId).find((g) => g.status !== 'COMPLETED') ?? null
 }

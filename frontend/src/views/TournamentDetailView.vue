@@ -8,8 +8,15 @@ import ResultRow from '@/components/ResultRow.vue'
 import TournamentBracket from '@/components/TournamentBracket.vue'
 import MatchRoundList from '@/components/MatchRoundList.vue'
 import TeamDrawer from '@/components/TeamDrawer.vue'
-import { getTournament, getTournamentMatches } from '@/mock/queries'
-import { formatDateRange, formatTournamentFormat, initials } from '@/utils/format'
+import FreeFireStandings from '@/components/FreeFireStandings.vue'
+import {
+  getFreeFireStandings,
+  getNextFreeFireGame,
+  getPlacementPoints,
+  getTournament,
+  getTournamentMatches,
+} from '@/mock/queries'
+import { formatDate, formatDateRange, formatTime, formatTournamentFormat, initials } from '@/utils/format'
 
 const props = defineProps({
   id: { type: String, required: true },
@@ -19,11 +26,34 @@ const RECENT_LIMIT = 5
 
 const tournament = computed(() => getTournament(props.id))
 
-const tabs = computed(() => [
-  { key: 'overview', label: 'ภาพรวม' },
-  ...(tournament.value?.format === 'SINGLE_ELIMINATION' ? [{ key: 'bracket', label: 'สายการแข่ง' }] : []),
-  { key: 'matches', label: 'แมตช์ทั้งหมด' },
-])
+const isPoints = computed(() => tournament.value?.format === 'POINTS')
+
+const tabs = computed(() =>
+  isPoints.value
+    ? [
+        { key: 'overview', label: 'ภาพรวม' },
+        { key: 'standings', label: 'ตารางคะแนน' },
+      ]
+    : [
+        { key: 'overview', label: 'ภาพรวม' },
+        { key: 'bracket', label: 'สายการแข่ง' },
+        { key: 'matches', label: 'แมตช์ทั้งหมด' },
+      ],
+)
+
+const standings = computed(() => (isPoints.value ? getFreeFireStandings(props.id) : null))
+const placementPoints = computed(() => (isPoints.value ? getPlacementPoints(props.id) : []))
+const nextGame = computed(() => (isPoints.value ? getNextFreeFireGame(props.id) : null))
+
+const pointsSummary = computed(() => {
+  if (!isPoints.value) return ''
+  const t = tournament.value
+  const { gamesCompleted, totalGames } = standings.value
+  const progress = gamesCompleted >= totalGames
+    ? `แข่งครบ ${gamesCompleted} จาก ${totalGames} เกม`
+    : `แข่งแล้ว ${gamesCompleted} จาก ${totalGames} เกม`
+  return [`${t.teams.length} ทีม`, formatDateRange(t.startDate, t.endDate), progress].join('  ·  ')
+})
 const route = useRoute()
 const router = useRouter()
 const requestedTab = String(route.query.tab ?? 'overview')
@@ -79,7 +109,7 @@ watch(() => props.id, () => {
         <span class="current" aria-current="page">{{ tournament.name }}</span>
       </nav>
 
-      <header class="header">
+      <header class="header" :class="{ compact: isPoints }">
         <span class="logo">
           <img v-if="tournament.logoUrl" :src="tournament.logoUrl" :alt="tournament.name" />
           <template v-else>{{ initials(tournament.name, 3) }}</template>
@@ -88,9 +118,21 @@ watch(() => props.id, () => {
           <div class="tags">
             <span class="game-tag">{{ tournament.game.name }}</span>
             <StatusBadge :status="tournament.status" large />
+            <span v-if="isPoints" class="format-tag">{{ formatTournamentFormat(tournament.format, tournament.totalGames) }}</span>
           </div>
           <h1 class="name">{{ tournament.name }}</h1>
-          <p v-if="tournament.description" class="description">{{ tournament.description }}</p>
+          <p v-if="isPoints" class="description">{{ pointsSummary }}</p>
+          <p v-else-if="tournament.description" class="description">{{ tournament.description }}</p>
+        </div>
+        <div v-if="isPoints && tournament.champion" class="side-box champion-box">
+          <span class="side-label">แชมป์</span>
+          <span class="side-title">{{ tournament.champion.name }}</span>
+          <span class="side-sub">แข่งครบ {{ standings.gamesCompleted }} เกม</span>
+        </div>
+        <div v-else-if="isPoints && nextGame" class="side-box">
+          <span class="side-label">เกมถัดไป</span>
+          <span class="side-title">เกมที่ {{ nextGame.gameNumber }}</span>
+          <span class="side-sub">{{ nextGame.scheduledAt ? `${formatDate(nextGame.scheduledAt)}, ${formatTime(nextGame.scheduledAt)}` : 'รอกำหนดวัน' }}</span>
         </div>
       </header>
 
@@ -126,7 +168,7 @@ watch(() => props.id, () => {
             <p v-else class="empty">ยังไม่มีทีมเข้าร่วม</p>
           </section>
 
-          <section class="section">
+          <section v-if="!isPoints" class="section">
             <div class="section-header">
               <h2 class="section-title">ผลการแข่งล่าสุด</h2>
               <button type="button" class="link" @click="activeTab = 'matches'">ดูแมตช์ทั้งหมด →</button>
@@ -150,6 +192,14 @@ watch(() => props.id, () => {
       <section v-else-if="activeTab === 'matches'" class="section">
         <MatchRoundList v-if="matches.length" :matches="matches" :team-count="tournament.teams.length" />
         <p v-else class="panel empty">ยังไม่มีแมตช์ในรายการนี้</p>
+      </section>
+
+      <section v-else-if="activeTab === 'standings'" class="section">
+        <FreeFireStandings
+          :standings="standings"
+          :placement-points="placementPoints"
+          :points-per-kill="tournament.pointsPerKill"
+        />
       </section>
 
       <section v-else class="section">
@@ -216,7 +266,7 @@ watch(() => props.id, () => {
 }
 .logo img { width: 100%; height: 100%; object-fit: cover; }
 .title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
-.tags { display: flex; gap: 8px; }
+.tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .game-tag {
   padding: 4px 12px;
   border-radius: var(--radius-pill);
@@ -226,6 +276,36 @@ watch(() => props.id, () => {
   font-weight: 500;
 }
 .name { font-family: var(--font-heading); font-weight: 600; font-size: 44px; }
+.format-tag {
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--color-info-bg);
+  color: var(--color-info);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.header.compact { gap: 24px; }
+.header.compact .logo { width: 88px; height: 88px; border-radius: 20px; font-size: 26px; }
+.header.compact .title { gap: 8px; }
+.header.compact .name { font-size: 36px; }
+.header.compact .description { font-size: 15px; white-space: pre-wrap; }
+.side-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 16px 20px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  white-space: nowrap;
+}
+.side-label { color: var(--color-muted); font-size: 13px; }
+.side-title { font-family: var(--font-heading); font-weight: 600; font-size: 22px; }
+.side-sub { color: var(--color-muted); font-size: 14px; }
+.champion-box { border-color: var(--color-accent); background: var(--color-accent-bg); }
+.champion-box .side-title { color: var(--color-accent); }
 .description { color: var(--color-muted); font-size: 16px; }
 
 .tabs { display: flex; gap: 32px; border-bottom: 1px solid var(--color-border); }
@@ -323,6 +403,9 @@ watch(() => props.id, () => {
 }
 @media (max-width: 640px) {
   .header { flex-direction: column; align-items: flex-start; gap: 16px; }
+  .header.compact .name { font-size: 28px; }
+  .header.compact .logo { width: 72px; height: 72px; font-size: 22px; }
+  .side-box { align-self: stretch; }
   .logo { width: 80px; height: 80px; font-size: 24px; border-radius: var(--radius-lg); }
   .name { font-size: 30px; }
   .tabs { gap: 20px; overflow-x: auto; }

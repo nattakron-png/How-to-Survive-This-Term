@@ -10,7 +10,11 @@ import MatchRoundList from '@/components/MatchRoundList.vue'
 import TeamDrawer from '@/components/TeamDrawer.vue'
 import FreeFireStandings from '@/components/FreeFireStandings.vue'
 import FreeFireOverview from '@/components/FreeFireOverview.vue'
+import FreeFireSchedule from '@/components/FreeFireSchedule.vue'
+import FreeFireGameResult from '@/components/FreeFireGameResult.vue'
 import {
+  getFreeFireGameResult,
+  getFreeFireSchedule,
   getFreeFireStandings,
   getNextFreeFireGame,
   getPlacementPoints,
@@ -35,6 +39,7 @@ const tabs = computed(() =>
     ? [
         { key: 'overview', label: 'ภาพรวม' },
         { key: 'standings', label: 'ตารางคะแนน' },
+        { key: 'games', label: 'ตารางเกม' },
         { key: 'teams', label: 'ทีมที่เข้าร่วม' },
       ]
     : [
@@ -48,6 +53,10 @@ const standings = computed(() => (isPoints.value ? getFreeFireStandings(props.id
 const placementPoints = computed(() => (isPoints.value ? getPlacementPoints(props.id) : []))
 const nextGame = computed(() => (isPoints.value ? getNextFreeFireGame(props.id) : null))
 const recentGames = computed(() => (isPoints.value ? getRecentFreeFireGames(props.id) : []))
+const schedule = computed(() => (isPoints.value ? getFreeFireSchedule(props.id) : []))
+const gameResult = computed(() =>
+  isPoints.value && selectedGameNumber.value ? getFreeFireGameResult(props.id, selectedGameNumber.value) : null,
+)
 const pointsByTeam = computed(
   () => new Map((standings.value?.standings ?? []).map((row) => [row.teamId, row.totalPoints])),
 )
@@ -65,9 +74,23 @@ const route = useRoute()
 const router = useRouter()
 const requestedTab = String(route.query.tab ?? 'overview')
 const activeTab = ref(tabs.value.some((t) => t.key === requestedTab) ? requestedTab : 'overview')
-watch(activeTab, (tab) => {
-  router.replace({ query: tab === 'overview' ? {} : { tab } })
+const selectedGameNumber = ref(route.query.game ? Number(route.query.game) : null)
+
+watch([activeTab, selectedGameNumber], ([tab, game]) => {
+  const query = tab === 'overview' ? {} : { tab }
+  if (tab === 'games' && game) query.game = String(game)
+  router.replace({ query })
 })
+
+function selectTab(key) {
+  activeTab.value = key
+  selectedGameNumber.value = null
+}
+
+function openGame(gameNumber) {
+  activeTab.value = 'games'
+  selectedGameNumber.value = gameNumber
+}
 
 const legend = [
   { label: 'จบแล้ว', tone: 'success' },
@@ -99,6 +122,7 @@ const infoRows = computed(() => {
 
 watch(() => props.id, () => {
   activeTab.value = 'overview'
+  selectedGameNumber.value = null
   selectedTeamId.value = null
 })
 </script>
@@ -113,7 +137,12 @@ watch(() => props.id, () => {
         <span>/</span>
         <RouterLink :to="{ name: 'tournaments', query: { game: tournament.game.code } }">{{ tournament.game.name }}</RouterLink>
         <span>/</span>
-        <span class="current" aria-current="page">{{ tournament.name }}</span>
+        <template v-if="gameResult && activeTab === 'games'">
+          <button type="button" class="crumb-link" @click="selectedGameNumber = null">{{ tournament.name }}</button>
+          <span>/</span>
+          <span class="current" aria-current="page">เกมที่ {{ gameResult.game.gameNumber }}</span>
+        </template>
+        <span v-else class="current" aria-current="page">{{ tournament.name }}</span>
       </nav>
 
       <header class="header" :class="{ compact: isPoints }">
@@ -152,7 +181,7 @@ watch(() => props.id, () => {
           class="tab"
           :class="{ active: activeTab === tab.key }"
           :aria-selected="activeTab === tab.key"
-          @click="activeTab = tab.key"
+          @click="selectTab(tab.key)"
         >{{ tab.label }}</button>
       </div>
 
@@ -162,8 +191,15 @@ watch(() => props.id, () => {
         :standings="standings"
         :recent-games="recentGames"
         :placement-points="placementPoints"
-        @show-standings="activeTab = 'standings'"
+        @show-standings="selectTab('standings')"
+        @show-games="selectTab('games')"
+        @open-game="openGame"
       />
+
+      <section v-else-if="activeTab === 'games'" class="section">
+        <FreeFireGameResult v-if="gameResult" :result="gameResult" @back="selectedGameNumber = null" />
+        <FreeFireSchedule v-else :games="schedule" @open-game="openGame" />
+      </section>
 
       <section v-else-if="activeTab === 'teams'" class="section">
         <div class="section-header">
@@ -279,7 +315,8 @@ watch(() => props.id, () => {
 }
 
 .breadcrumb { display: flex; flex-wrap: wrap; gap: 8px; color: var(--color-muted); font-size: 15px; }
-.breadcrumb a:hover { color: var(--color-text); }
+.breadcrumb a:hover, .crumb-link:hover { color: var(--color-text); }
+.crumb-link { padding: 0; border: 0; background: none; color: inherit; font: inherit; }
 .breadcrumb .current { color: var(--color-text); font-weight: 500; }
 
 .header { display: flex; align-items: center; gap: 28px; }

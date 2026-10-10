@@ -8,7 +8,7 @@ const props = defineProps({
   recentGames: { type: Array, required: true },
   placementPoints: { type: Array, required: true },
 })
-defineEmits(['show-standings'])
+defineEmits(['show-standings', 'show-games', 'open-game'])
 
 const isFinished = computed(() => props.standings.gamesCompleted >= props.standings.totalGames)
 
@@ -62,6 +62,7 @@ const gameTime = (at) => (at ? `${formatShortDate(at)} ${formatTime(at)}` : '-')
 
       <div class="section-header">
         <h2 class="section-title">เกมล่าสุด</h2>
+        <button type="button" class="link" @click="$emit('show-games')">ดูตารางเกม →</button>
       </div>
 
       <template v-if="recentGames.length">
@@ -77,7 +78,7 @@ const gameTime = (at) => (at ? `${formatShortDate(at)} ${formatTime(at)}` : '-')
             <span class="game-team">{{ game.booyahTeam.name }}</span>
           </template>
           <span v-else class="game-team muted">ยังไม่มีผล</span>
-          <span class="game-detail">ดูผลเกม ›</span>
+          <button type="button" class="game-detail" @click="$emit('open-game', game.gameNumber)">ดูผลเกม ›</button>
         </div>
       </template>
       <p v-else class="empty">ยังไม่มีเกมที่แข่งจบ</p>
@@ -169,7 +170,16 @@ const gameTime = (at) => (at ? `${formatShortDate(at)} ${formatTime(at)}` : '-')
 }
 .game-team { flex: 1; min-width: 0; font-size: 15px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .game-team.muted { color: var(--color-muted); }
-.game-detail { flex-shrink: 0; color: var(--color-accent); font-size: 14px; font-weight: 500; }
+.game-detail {
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font-size: 14px;
+  font-weight: 500;
+}
+.game-detail:hover, .link:hover { text-decoration: underline; }
 
 .infobox {
   width: 440px;

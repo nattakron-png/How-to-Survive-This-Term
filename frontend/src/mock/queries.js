@@ -189,13 +189,44 @@ export function getNextFreeFireGame(tournamentId) {
   return getFreeFireGames(tournamentId).find((g) => g.status !== 'COMPLETED') ?? null
 }
 
+function withBooyah(game) {
+  const booyah = freeFireGameResults.find((r) => r.gameId === game.id && r.placement === 1)
+  return { ...game, booyahTeam: booyah ? teamById.get(booyah.teamId) : null }
+}
+
 export function getRecentFreeFireGames(tournamentId, limit = 3) {
   return getFreeFireGames(tournamentId)
     .filter((g) => g.status === 'COMPLETED')
     .reverse()
     .slice(0, limit)
-    .map((game) => {
-      const booyah = freeFireGameResults.find((r) => r.gameId === game.id && r.placement === 1)
-      return { ...game, booyahTeam: booyah ? teamById.get(booyah.teamId) : null }
+    .map(withBooyah)
+}
+
+export function getFreeFireSchedule(tournamentId) {
+  return getFreeFireGames(tournamentId).map(withBooyah)
+}
+
+export function getFreeFireGameResult(tournamentId, gameNumber) {
+  const id = Number(tournamentId)
+  const game = getFreeFireGames(id).find((g) => g.gameNumber === Number(gameNumber))
+  if (!game || game.status !== 'COMPLETED') return null
+  const pointsFor = new Map(getPlacementPoints(id).map((p) => [p.placement, p.points]))
+  const perKill = tournamentById.get(id)?.pointsPerKill ?? 1
+  const rows = freeFireGameResults
+    .filter((r) => r.gameId === game.id)
+    .sort((a, b) => a.placement - b.placement)
+    .map((r) => {
+      const placementPoints = pointsFor.get(r.placement) ?? 0
+      const killPoints = r.kills * perKill
+      return {
+        id: r.id,
+        placement: r.placement,
+        team: teamById.get(r.teamId),
+        kills: r.kills,
+        placementPoints,
+        killPoints,
+        total: placementPoints + killPoints,
+      }
     })
+  return { game, rows }
 }
